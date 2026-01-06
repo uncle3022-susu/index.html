@@ -415,4 +415,248 @@ function renderAll() { renderCalendar(); renderWorkerList(); }
 
 function switchPage(p, el) {
     document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.nav-item').
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    document.getElementById('tab-'+p).classList.add('active');
+    el.classList.add('active');
+}
+
+function changeMonth(dir) { curMonth.setMonth(curMonth.getMonth() + dir); renderAll(); }
+
+function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const y = curMonth.getFullYear(), m = curMonth.getMonth();
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === y && today.getMonth() === m;
+
+    document.getElementById('monthTitle').innerText = `${y}年 ${m + 1}月`;
+    document.getElementById('weekLabels').style.color = db.ui.week;
+    
+    grid.innerHTML = "";
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInM = new Date(y, m + 1, 0).getDate();
+    
+    for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>';
+    
+    for (let d = 1; d <= daysInM; d++) {
+        const dStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const daySites = db.sites.filter(s => s.date === dStr);
+        const isToday = isCurrentMonth && today.getDate() === d;
+        
+        let html = `<div class="day-card ${isToday?'today':''}" onclick="openDayModal('${dStr}')">
+            <span class="day-num" style="color:${db.ui.date}">${d}</span>`;
+        daySites.forEach(s => {
+            html += `<div class="site-tag" style="background:${s.color}">${s.name}</div>`;
+        });
+        grid.innerHTML += html + `</div>`;
+    }
+}
+
+function renderWorkerList() {
+    const list = document.getElementById('workerList');
+    const q = document.getElementById('workerSearch').value.toLowerCase();
+    const dQ = document.getElementById('dateSearch').value;
+    const ym = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+    list.innerHTML = "";
+    let totalAll = 0;
+    
+    const sorted = db.workers.slice().sort((a,b) => (b.isTop?1:0) - (a.isTop?1:0));
+    const filtered = sorted.filter(w => {
+        const matchN = w.name.toLowerCase().includes(q);
+        const matchD = dQ ? db.sites.some(s => s.date === dQ && s.workerIds.includes(w.id)) : true;
+        return matchN && matchD;
+    });
+
+    filtered.forEach(w => {
+        const sites = db.sites.filter(s => s.date.startsWith(ym) && s.workerIds.includes(w.id));
+        const exs = db.extras.filter(e => e.workerId === w.id && e.date.startsWith(ym));
+        const exSum = exs.reduce((a,b) => a + Number(b.amount), 0);
+        const subTotal = (sites.length * Number(w.rate)) + exSum;
+        totalAll += subTotal;
+        list.innerHTML += `
+        <div class="card worker-item" onclick="openWorkerModal('${w.id}')">
+            <div class="worker-info">
+                <b>${w.isTop?'⭐ ':''}${w.name}</b>
+                <span class="worker-meta">${sites.length} 天上工</span>
+            </div>
+            <div class="text-price">$${subTotal.toLocaleString()}</div>
+        </div>`;
+    });
+    document.getElementById('totalExp').innerText = `$${totalAll.toLocaleString()}`;
+    const p = db.payments[ym];
+    document.getElementById('payStatusLabel').innerHTML = (p && p.done) ? "✅ 已完成請款" : "";
+}
+
+// Modal Animation Wrapper
+function showModal(h) { 
+    const overlay = document.getElementById('modalOverlay');
+    document.getElementById('modalBody').innerHTML = h; 
+    overlay.classList.add('show');
+}
+function closeModal(e) { 
+    if(e) e.preventDefault();
+    document.getElementById('modalOverlay').classList.remove('show'); 
+}
+
+function openDayModal(date) {
+    const sites = db.sites.filter(s => s.date === date);
+    let h = `<h3 style="margin-top:0">📅 ${date}</h3>`;
+    if(sites.length === 0) h += `<div style="text-align:center;color:#999;padding:20px;">今日無案場</div>`;
+    sites.forEach(s => h += `<button class="btn" style="background:${s.color}; color:white;" onclick="openSiteEdit('${s.id}','${date}')">✏️ ${s.name}</button>`);
+    h += `<hr style="border:0; border-top:1px solid #eee; margin:20px 0;"><button class="btn btn-blue" onclick="openSiteEdit(null,'${date}')">+ 新增案場</button>`;
+    showModal(h);
+}
+
+function openSiteEdit(id, date) {
+    const s = db.sites.find(x => x.id === id) || { id: "s"+Date.now(), name: "", color: "#2563EB", workerIds: [] };
+    let h = `<h3 style="margin-top:0">${id ? '編輯案場' : '新增案場'}</h3><input id="sName" class="input-f" value="${s.name}" placeholder="輸入案場名稱 (如：信義A13)">`;
+    h += `<div class="row-between"><span>標籤顏色</span><input type="color" id="sColor" value="${s.color}"></div>`;
+    h += `<h4 style="margin: 15px 0 5px 0; color:var(--text-sub)">選擇上工人員</h4><div id="swList" style="max-height:250px; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:10px;">`;
+    
+    db.workers.slice().sort((a,b)=>(b.isTop?1:0)-(a.isTop?1:0)).forEach(w => {
+        h += `<div class="row-between" style="padding:10px 0;">
+                <span style="font-weight:600">${w.isTop?'⭐':''} ${w.name}</span>
+                <input type="checkbox" class="site-ck" value="${w.id}" ${s.workerIds.includes(w.id)?'checked':''}>
+              </div>`;
+    });
+    h += `</div><div style="display:flex; gap:10px; margin-top:15px;">`;
+    if (id) h += `<button class="btn btn-red" style="flex:1" onclick="deleteItem('sites','${id}')">刪除</button>`;
+    h += `<button class="btn btn-blue" style="flex:2" onclick="saveSite('${s.id}','${date}')">儲存</button></div>`;
+    showModal(h);
+}
+
+function openWorkerModal(id) {
+    const isNew = !id;
+    const w = db.workers.find(x => x.id === id) || { id: "w"+Date.now(), name: "", rate: "", phone: "", note: "", isTop: false };
+    const ym = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+    
+    let h = `<h3 style="margin-top:0">${isNew ? '新增人員' : '編輯人員資料'}</h3>`;
+    h += `<div class="row-between"><span>⭐ 置頂優先顯示</span><input type="checkbox" id="wTop" ${w.isTop?'checked':''}></div>`;
+    h += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">`;
+    h += `<input id="wName" class="input-f" value="${w.name}" placeholder="姓名">`;
+    h += `<input id="wRate" type="number" class="input-f" value="${w.rate}" placeholder="日薪">`;
+    h += `</div>`;
+    h += `<input id="wPhone" class="input-f" value="${w.phone}" placeholder="聯絡電話">`;
+    h += `<textarea id="wNote" class="input-f" placeholder="備註 (技能、習慣...)" style="height:80px">${w.note}</textarea>`;
+    
+    if (!isNew) {
+        const sites = db.sites.filter(s => s.date.startsWith(ym) && s.workerIds.includes(w.id));
+        const exs = db.extras.filter(e => e.workerId === w.id && e.date.startsWith(ym));
+        const exSum = exs.reduce((a,b) => a + Number(b.amount), 0);
+        const salary = sites.length * (Number(w.rate) || 0);
+        
+        h += `<div class="card" style="background:var(--bg-body); margin:15px 0; border:none;">
+                <h4 style="margin:0 0 10px 0">💰 本月結算 (${ym})</h4>
+                <div class="row-between" style="padding:8px 0"><span>工天 (${sites.length}天)</span><span>$${salary.toLocaleString()}</span></div>
+                <div class="row-between" style="padding:8px 0"><span>雜費/借支</span><span>$${exSum.toLocaleString()}</span></div>
+                <div class="row-between" style="border-top:2px solid #ddd; padding-top:10px; margin-top:5px;"><b>總計應付</b><b class="text-price" style="font-size:1.2rem">$${(salary + exSum).toLocaleString()}</b></div>
+              </div>`;
+              
+        h += `<h4 style="margin-bottom:5px">雜費明細</h4><div style="max-height:150px; overflow-y:auto; margin-bottom:15px;">` + 
+            exs.map(e => `<div class="row-between" style="font-size:0.9rem"><span>${e.date.slice(5)} ${e.item}</span><span style="display:flex;align-items:center;gap:10px"><b>$${e.amount}</b> <span onclick="delEx('${e.id}','${w.id}')" style="color:var(--danger);cursor:pointer">✕</span></span></div>`).join('') 
+            + `</div>`;
+        h += `<div style="background:#f1f5f9; padding:10px; border-radius:12px;">
+                <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">新增雜費</div>
+                <div style="display:flex; gap:5px;">
+                    <input type="date" id="exD" class="input-f" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:35%">
+                    <input id="exN" class="input-f" placeholder="項目" style="margin:0; width:35%">
+                    <input id="exA" type="number" class="input-f" placeholder="$" style="margin:0; width:30%">
+                </div>
+                <button class="btn btn-blue" style="margin-top:5px; padding:8px; font-size:14px" onclick="addEx('${w.id}')">＋</button>
+              </div>`;
+    }
+    
+    h += `<div style="display:flex; gap:10px; margin-top:20px;">`;
+    if (!isNew) h += `<button class="btn btn-red" style="flex:1" onclick="deleteWorker('${id}')">刪除</button>`;
+    h += `<button class="btn btn-blue" style="flex:2" onclick="saveWorker('${w.id}')">儲存資料</button></div>`;
+    showModal(h);
+}
+
+function openPaymentModal() {
+    const ym = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+    const p = db.payments[ym] || { done: false, date: "", memo: "" };
+    let h = `<h3 style="margin-top:0; color:var(--text-main)">本月總支出結算</h3>`;
+    h += `<div style="font-size:2rem; font-weight:800; color:var(--danger); margin-bottom:20px;">${document.getElementById('totalExp').innerText}</div>`;
+    h += `<div class="row-between"><span>✅ 設定為已完成請款</span><input type="checkbox" id="payDone" ${p.done?'checked':''}></div>`;
+    h += `<div style="margin-top:15px; color:var(--text-sub); font-size:0.9rem">請款/撥款日期</div>`;
+    h += `<input type="date" id="payDate" class="input-f" value="${p.date}">`;
+    h += `<textarea id="payMemo" class="input-f" placeholder="備註 (例如：業主匯款帳號、發票號碼...)" style="height:100px">${p.memo}</textarea>`;
+    h += `<button class="btn btn-blue" onclick="savePay()">更新狀態</button>`;
+    showModal(h);
+}
+
+function openMultiExtra() {
+    let h = `<h3 style="margin-top:0">💰 批量發放雜費</h3>
+    <div style="background:var(--primary-light); padding:15px; border-radius:12px; margin-bottom:15px;">
+        <input type="date" id="meD" class="input-f" value="${new Date().toISOString().split('T')[0]}" style="margin-top:0">
+        <input id="meN" class="input-f" placeholder="項目 (例如：飲料費、午餐)">
+        <input id="meA" type="number" class="input-f" placeholder="單人金額 (例如：60)" style="margin-bottom:0">
+    </div>`;
+    h += `<h4 style="margin-bottom:5px">選擇發放對象</h4><div id="meList" style="max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:10px;">`;
+    db.workers.slice().sort((a,b)=>(b.isTop?1:0)-(a.isTop?1:0)).forEach(w => {
+        h += `<div class="row-between" style="padding:10px 0;"><span>${w.isTop?'⭐':''} ${w.name}</span><input type="checkbox" class="me-ck" value="${w.id}"></div>`;
+    });
+    h += `</div><button class="btn btn-blue" onclick="saveMultiEx()">確認發放</button>`;
+    showModal(h);
+}
+
+function saveSite(id, date) {
+    const name = document.getElementById('sName').value; 
+    if (!name) return showToast('請輸入案場名稱', 'error');
+    const wIds = Array.from(document.querySelectorAll('.site-ck:checked')).map(el => el.value);
+    const data = { id, date, name, color: document.getElementById('sColor').value, workerIds: wIds };
+    const idx = db.sites.findIndex(x => x.id === id);
+    if (idx > -1) db.sites[idx] = data; else db.sites.push(data);
+    closeModal(); renderAll(); saveData(); showToast('案場已儲存', 'success');
+}
+
+function saveWorker(id) {
+    const name = document.getElementById('wName').value; 
+    if (!name) return showToast('請輸入姓名', 'error');
+    const data = { id, name, rate: document.getElementById('wRate').value, phone: document.getElementById('wPhone').value, note: document.getElementById('wNote').value, isTop: document.getElementById('wTop').checked };
+    const idx = db.workers.findIndex(x => x.id === id);
+    if (idx > -1) db.workers[idx] = data; else db.workers.push(data);
+    closeModal(); renderAll(); saveData(); showToast('資料已更新', 'success');
+}
+
+function addEx(wid) {
+    const n = document.getElementById('exN').value, a = document.getElementById('exA').value; 
+    if (!n || !a) return showToast('請輸入項目與金額', 'error');
+    db.extras.push({ id: "e"+Date.now(), workerId: wid, date: document.getElementById('exD').value, item: n, amount: a });
+    openWorkerModal(wid); renderWorkerList(); saveData();
+}
+
+function saveMultiEx() {
+    const d = document.getElementById('meD').value, n = document.getElementById('meN').value, a = document.getElementById('meA').value;
+    const ids = Array.from(document.querySelectorAll('.me-ck:checked')).map(el => el.value);
+    if (!n || !a || ids.length === 0) return showToast('資料不完整或未選人', 'error');
+    ids.forEach(wid => db.extras.push({ id: "me"+Math.random(), workerId: wid, date: d, item: n, amount: a }));
+    closeModal(); renderWorkerList(); saveData(); showToast(`已發放給 ${ids.length} 人`, 'success');
+}
+
+function savePay() {
+    const ym = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+    db.payments[ym] = { done: document.getElementById('payDone').checked, date: document.getElementById('payDate').value, memo: document.getElementById('payMemo').value };
+    closeModal(); renderWorkerList(); saveData(); showToast('狀態已更新', 'success');
+}
+
+function applyUI() { 
+    document.getElementById('cfg-date').value = db.ui.date || '#1E293B';
+    document.getElementById('cfg-week').value = db.ui.week || '#64748B';
+}
+function updateUI(k, v) { db.ui[k] = v; applyUI(); renderAll(); saveData(); }
+
+function delEx(eid, wid) { if (confirm("確定刪除此筆雜費？")) { db.extras = db.extras.filter(x => x.id !== eid); openWorkerModal(wid); renderWorkerList(); saveData(); } }
+function deleteWorker(id) { if (confirm("⚠️ 刪除師傅會一併刪除其所有雜費紀錄，確定嗎？")) { db.workers = db.workers.filter(x => x.id !== id); db.extras = db.extras.filter(e => e.workerId !== id); closeModal(); renderAll(); saveData(); } }
+function deleteItem(type, id) { if (confirm("確定刪除？")) { db[type] = db[type].filter(x => x.id !== id); closeModal(); renderAll(); saveData(); } }
+
+function masterReset() {
+    if (confirm("⚠️ 嚴重警告：這會清空所有資料且無法復原！")) {
+        db = { workers: [], sites: [], extras: [], payments: {}, ui: { date: '#1E293B', week: '#64748B' } };
+        localStorage.clear(); 
+        syncCloud();
+        window.location.href = window.location.href.split('?')[0];
+    }
+}
+</script>
+</body>
+</html>
