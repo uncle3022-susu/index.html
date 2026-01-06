@@ -4,186 +4,521 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>工程帳本 Pro (主題版)</title>
+    <title>工程帳本 Pro (滾輪版)</title>
     <style>
-        /* --- CSS 變數系統 (主題引擎核心) --- */
+        /* --- 1. CSS 變數系統 (主題核心) --- */
         :root {
-            /* 預設值，會被 JS 覆蓋 */
-            --primary: #4F46E5; 
-            --primary-grad: linear-gradient(135deg, #4F46E5, #3730A3);
-            --bg-body: #F8FAFC; 
+            /* 預設值 (會被 JS 覆蓋) */
+            --primary: #5B9A8B; /* 抹茶綠 */
+            --primary-light: #E8F5E9;
+            --primary-grad: linear-gradient(135deg, #66BB6A, #43A047);
+            --bg-body: #F4F7F6; 
             --bg-card: #FFFFFF;
-            --text-main: #1E293B; 
-            --text-sub: #64748B;
-            --border: #E2E8F0;
-            --active-nav: #4F46E5;
+            --text-main: #2C3E50; 
+            --text-sub: #95A5A6;
+            --border: #ECF0F1;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --radius-box: 20px;
+            --radius-btn: 16px;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        [data-mode="dark"] {
+            --bg-body: #121212; --bg-card: #1E1E1E; --text-main: #E0E0E0; --text-sub: #A0A0A0; --border: #333;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         
         body {
             margin: 0; background: var(--bg-body); color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, "SF Pro Text", BlinkMacSystemFont, sans-serif;
             padding-bottom: calc(90px + env(safe-area-inset-bottom));
             overflow-x: hidden; transition: background 0.3s ease;
         }
 
-        /* 按鈕美化 */
-        .btn { 
-            width: 100%; padding: 14px; border: none; border-radius: 16px; 
-            font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 10px; color: white; 
-            transition: transform 0.1s, box-shadow 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .btn:active { transform: scale(0.97); }
-        
-        /* 重點按鈕使用漸層 */
-        .btn-primary { background: var(--primary-grad); }
-        .btn-danger { background: linear-gradient(135deg, #EF4444, #B91C1C); }
-        .btn-ghost { background: transparent; color: var(--text-sub); border: 1px solid var(--border); box-shadow: none; }
-
-        /* 卡片與佈局 */
-        .app-container { max-width: 600px; margin: 0 auto; min-height: 100vh; }
-        
-        .month-nav {
+        /* --- 2. 頂部導航 & 日期滾輪觸發區 --- */
+        .header-bar {
             position: sticky; top: 0; z-index: 50;
-            background: var(--bg-card); /* 跟隨卡片顏色，但在深色模式會變 */
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            background: rgba(255, 255, 255, 0.85); /* 預設半透明 */
+            background: var(--bg-body); /* 與背景融合，更有 App 感 */
             padding: 15px 20px;
             display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-        [data-mode="dark"] .month-nav { background: rgba(30, 41, 59, 0.9); }
-
-        .card { 
-            background: var(--bg-card); border-radius: 20px; padding: 20px; margin-bottom: 16px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-            border: 1px solid var(--border);
-            transition: background 0.3s ease, border 0.3s ease;
         }
         
-        .page { display: none; padding: 15px; animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* 模仿圖四的日期顯示方式 */
+        .date-trigger-btn {
+            font-size: 1.5rem; font-weight: 700; color: var(--text-main);
+            background: transparent; border: none; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; padding: 0;
+        }
+        .date-trigger-btn::after {
+            content: "▼"; font-size: 0.8rem; color: var(--text-sub); opacity: 0.6;
+        }
+
+        .icon-btn {
+            background: var(--bg-card); border: 1px solid var(--border);
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text-main);
+        }
+
+        /* --- 3. 卡片與內容 --- */
+        .page { display: none; padding: 10px 20px; animation: fadeIn 0.3s ease; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 日曆格線 */
-        .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; text-align: center; }
-        .week-header { font-weight: 600; font-size: 0.8rem; color: var(--text-sub); padding-bottom: 12px; }
-        .day-grid { gap: 8px; }
-        .day-card {
-            background: var(--bg-card); border-radius: 12px; min-height: 85px; padding: 6px;
-            border: 1px solid var(--border); display: flex; flex-direction: column; cursor: pointer;
-            position: relative; overflow: hidden;
-        }
-        .day-card.today { border: 2px solid var(--primary); }
-        .day-num { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; z-index: 2; }
-        .site-tag { 
-            font-size: 10px; padding: 3px 6px; border-radius: 6px; color: white; 
-            font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; 
-            text-overflow: ellipsis; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        .card { 
+            background: var(--bg-card); border-radius: var(--radius-box); padding: 20px; margin-bottom: 20px; 
+            box-shadow: var(--shadow); border: 1px solid var(--border);
         }
 
-        /* 輸入框 */
-        .input-f { 
-            width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 14px; 
-            background: var(--bg-body); color: var(--text-main); font-size: 16px; margin: 8px 0; outline: none; 
-            transition: border 0.2s;
-        }
-        .input-f:focus { border-color: var(--primary); }
-
-        .row-between { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px dashed var(--border); }
+        /* 日曆樣式 (配合圖三) */
+        .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+        .week-header { font-size: 0.85rem; color: var(--text-sub); padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+        .day-grid { gap: 8px 4px; }
         
-        /* 底部導航 */
-        .bottom-nav {
-            position: fixed; bottom: 0; width: 100%; height: calc(70px + env(safe-area-inset-bottom));
-            background: var(--bg-card); border-top: 1px solid var(--border); display: flex; justify-content: space-around;
-            padding-bottom: env(safe-area-inset-bottom); z-index: 100; max-width: 600px;
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.02);
-            transition: background 0.3s ease;
+        .day-cell {
+            min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            border-radius: 10px; padding: 4px; cursor: pointer; position: relative;
         }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sub); font-size: 11px; cursor: pointer; transition: color 0.2s; }
-        .nav-item.active { color: var(--active-nav); font-weight: 700; }
-        .nav-item svg { width: 26px; height: 26px; margin-bottom: 4px; stroke: currentColor; stroke-width: 2; fill: none; transition: stroke 0.2s; }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 2000; display: none;
-            align-items: flex-end; justify-content: center; backdrop-filter: blur(4px);
-        }
-        .modal-box {
-            background: var(--bg-card); width: 100%; max-width: 600px; max-height: 85vh;
-            border-radius: 28px 28px 0 0; padding: 25px; overflow-y: auto;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
-            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        /* 主題選擇器樣式 */
-        .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
-        .theme-opt { 
-            border-radius: 12px; padding: 10px; cursor: pointer; border: 2px solid transparent; text-align: center;
-            background: var(--bg-body); transition: transform 0.2s;
-        }
-        .theme-opt.selected { border-color: var(--primary); transform: scale(0.95); background: rgba(0,0,0,0.05); }
-        .color-dot { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 5px auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .theme-name { font-size: 12px; color: var(--text-main); }
+        .day-num { font-size: 1rem; font-weight: 500; z-index: 2; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .day-cell.today .day-num { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .day-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; background: transparent; }
+        .has-work .day-dot { background: var(--primary); }
 
         /* 統計卡片 */
-        .stat-card {
-            background: var(--primary-grad); color: white;
-            box-shadow: 0 8px 16px -4px rgba(0,0,0,0.2);
-            border: none; position: relative; overflow: hidden;
+        .stat-banner {
+            background: var(--text-main); color: white; /* 深色背景 */
+            border-radius: var(--radius-box); padding: 25px; margin-bottom: 20px;
+            box-shadow: var(--shadow);
         }
-        .stat-card::after {
-            content: ""; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px;
-            background: rgba(255,255,255,0.1); border-radius: 50%; pointer-events: none;
+
+        /* 按鈕美化 (解決"很醜的藍色") */
+        .btn { 
+            width: 100%; padding: 16px; border: none; border-radius: var(--radius-btn); 
+            font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 10px; color: white; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.1s;
         }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primary-grad); } /* 使用主題漸層 */
+        .btn-danger { background: linear-gradient(135deg, #FF6B6B, #EE5253); }
+
+        /* 輸入框 */
+        .input-group { background: var(--bg-card); padding: 10px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; display: flex; align-items: center; }
+        .input-f { border: none; width: 100%; font-size: 16px; outline: none; background: transparent; color: var(--text-main); margin-left: 10px; }
+
+        /* 底部導航 */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; height: calc(75px + env(safe-area-inset-bottom));
+            background: var(--bg-card); border-top: 1px solid var(--border); 
+            display: flex; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); 
+            z-index: 90; backdrop-filter: blur(10px);
+        }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sub); font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: 700; }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+        /* --- 4. 滾輪日期選擇器 (Custom Wheel Picker) --- */
+        .picker-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 2000; display: none; opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .picker-box {
+            position: absolute; bottom: 0; width: 100%; background: var(--bg-card);
+            border-radius: 24px 24px 0 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        .picker-header { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: var(--primary); }
+        .picker-body { display: flex; height: 200px; position: relative; overflow: hidden; mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent); }
+        .wheel-col { flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; text-align: center; padding: 80px 0; }
+        .wheel-col::-webkit-scrollbar { display: none; } /* 隱藏捲軸 */
+        .wheel-item { height: 40px; line-height: 40px; font-size: 1.2rem; scroll-snap-align: center; color: var(--text-sub); opacity: 0.5; transition: all 0.2s; }
+        .wheel-item.selected { color: var(--text-main); font-size: 1.4rem; font-weight: bold; opacity: 1; transform: scale(1.1); }
+        .selection-highlight {
+            position: absolute; top: 50%; left: 0; width: 100%; height: 40px; margin-top: -20px;
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); pointer-events: none;
+        }
+
+        /* 主題選擇器 */
+        .theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .theme-opt { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; cursor: pointer; position: relative; }
+        .theme-opt.active { border-color: var(--text-main); transform: scale(1.1); }
+
     </style>
 </head>
 <body>
 
-<div class="app-container">
+<header class="header-bar">
+    <button class="date-trigger-btn" onclick="openDatePicker()">
+        <span id="displayYear">2026</span>年 <span id="displayMonth">1</span>月
+    </button>
+    <div class="icon-btn" onclick="switchPage('set', document.getElementById('nav-set'))">⚙️</div>
+</header>
 
-    <header class="month-nav">
-        <button class="btn btn-ghost" style="width:40px; padding:0;" onclick="changeMonth(-1)">◀</button>
-        <h2 id="monthTitle" style="margin:0; font-size:1.1rem">載入中...</h2>
-        <button class="btn btn-ghost" style="width:40px; padding:0;" onclick="changeMonth(1)">▶</button>
-    </header>
-
-    <main>
-        <section id="tab-cal" class="page active">
-            <div class="card">
-                <div class="grid-7 week-header">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-                </div>
-                <div id="calendarGrid" class="grid-7 day-grid"></div>
+<main style="padding-bottom: 20px;">
+    <section id="tab-cal" class="page active">
+        <div class="card">
+            <div class="grid-7 week-header">
+                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
             </div>
-        </section>
+            <div id="calendarGrid" class="grid-7 day-grid"></div>
+        </div>
+        <div id="daySummary" style="margin-top:20px; display:none;">
+            <h3 id="selDateTitle" style="margin:0 0 10px 0;"></h3>
+            <div id="daySiteList"></div>
+            <button class="btn btn-primary" onclick="openSiteEdit(null)">+ 新增案場</button>
+        </div>
+    </section>
 
-        <section id="tab-work" class="page">
-            <div class="card stat-card" onclick="openPaymentModal()">
-                <div style="opacity:0.9; font-size:0.9rem">本月預估支出</div>
-                <div style="font-size:2.5rem; font-weight:800; margin:5px 0" id="totalExp">$0</div>
-                <div id="payStatusLabel" style="font-weight:bold; font-size:0.9rem; background:rgba(255,255,255,0.2); display:inline-block; padding:2px 8px; border-radius:4px;"></div>
-            </div>
-            
-            <div style="margin: 10px 15px;">
-                <input type="text" id="workerSearch" class="input-f" placeholder="🔍 搜尋師傅..." oninput="renderWorkerList()" style="box-shadow: 0 2px 5px rgba(0,0,0,0.05); border:none;">
-            </div>
+    <section id="tab-work" class="page">
+        <div class="stat-banner">
+            <div style="opacity:0.8; font-size:0.9rem">本月預估支出</div>
+            <div style="font-size:2.5rem; font-weight:800; margin:5px 0" id="totalExp">$0</div>
+        </div>
+        
+        <div class="input-group">
+            <span>🔍</span>
+            <input type="text" id="workerSearch" class="input-f" placeholder="搜尋師傅..." oninput="renderWorkerList()">
+        </div>
+        
+        <button class="btn btn-primary" onclick="openWorkerModal(null)">+ 新增師傅</button>
+        
+        <div id="workerList" style="margin-top: 20px;"></div>
+    </section>
 
-            <div style="padding: 0 15px;">
-                <button class="btn btn-primary" onclick="openWorkerModal(null)">+ 新增師傅</button>
-            </div>
-            
-            <div id="workerList" style="padding: 15px 0;"></div>
-            
-            <button class="btn btn-primary" style="position:fixed; bottom:90px; right:20px; width:56px; height:56px; border-radius:28px; font-size:22px; padding:0; z-index:90;" onclick="openMultiExtra()">💰</button>
-        </section>
+    <section id="tab-set" class="page">
+        <div class="card">
+            <h3>🎨 主題風格</h3>
+            <p style="color:var(--text-sub); font-size:0.9rem">選擇你喜歡的配色</p>
+            <div class="theme-grid" id="themeContainer"></div>
+        </div>
+        <div class="card">
+            <h3>📂 資料管理</h3>
+            <button class="btn btn-danger" onclick="masterReset()">⚠️ 重置所有資料</button>
+        </div>
+    </section>
+</main>
 
-        <section id="tab-set" class="page">
-            <div class="card">
-                <h3>🎨 介面主題</h3>
-                <div class="theme-grid" id="themeSelector
+<nav class="bottom-nav">
+    <div id="nav-cal" class="nav-item active" onclick="switchPage('cal', this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>日曆</span>
+    </div>
+    <div id="nav-work" class="nav-item" onclick="switchPage('work', this)">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path></svg><span>人員</span>
+    </div>
+    <div id="nav-set" class="nav-item" onclick="switchPage('set', this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span>設定</span>
+    </div>
+</nav>
+
+<div id="datePicker" class="picker-overlay" onclick="closeDatePicker()">
+    <div class="picker-box" onclick="event.stopPropagation()">
+        <div class="picker-header">
+            <span onclick="closeDatePicker()" style="color:var(--text-sub); font-weight:400; cursor:pointer">取消</span>
+            <span>選擇月份</span>
+            <span onclick="confirmDate()" style="cursor:pointer">確定</span>
+        </div>
+        <div class="picker-body">
+            <div class="selection-highlight"></div>
+            <div class="wheel-col" id="yearWheel"></div> <div class="wheel-col" id="monthWheel"></div> </div>
+    </div>
+</div>
+
+<div id="modalOverlay" class="picker-overlay" onclick="closeModal()">
+    <div class="picker-box" onclick="event.stopPropagation()">
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<script>
+/* --- 1. 資料庫與全域變數 --- */
+let db = { workers: [], sites: [], theme: 'matcha' }; // 預設改為抹茶
+let curDate = new Date();
+let selDateStr = "";
+
+// 主題定義 (色票系統)
+const THEMES = {
+    'matcha': { main: '#5B9A8B', grad: 'linear-gradient(135deg, #8FC1A9, #5B9A8B)', bg: '#F4F7F6' }, // 抹茶綠 (你喜歡的)
+    'ocean':  { main: '#2980B9', grad: 'linear-gradient(135deg, #3498DB, #2980B9)', bg: '#ECF5FA' }, // 海洋藍
+    'sunset': { main: '#E67E22', grad: 'linear-gradient(135deg, #F39C12, #D35400)', bg: '#FEF5E7' }, // 夕陽橘
+    'purple': { main: '#8E44AD', grad: 'linear-gradient(135deg, #9B59B6, #8E44AD)', bg: '#F5EEF8' }, // 薰衣草
+    'dark':   { main: '#555',    grad: 'linear-gradient(135deg, #555, #333)',       bg: '#121212', mode: 'dark' } // 極簡黑
+};
+
+/* --- 2. 初始化 --- */
+window.onload = function() {
+    loadData();
+    applyTheme(db.theme);
+    renderThemeOpts();
+    curDate.setDate(1); // 設為當月1號
+    updateDateDisplay();
+    renderAll();
+};
+
+function loadData() {
+    const d = localStorage.getItem('PRO_LEDGER_DB');
+    if(d) db = JSON.parse(d);
+    if(!db.theme) db.theme = 'matcha';
+}
+function saveData() {
+    localStorage.setItem('PRO_LEDGER_DB', JSON.stringify(db));
+}
+
+/* --- 3. 核心功能 --- */
+function updateDateDisplay() {
+    document.getElementById('displayYear').innerText = curDate.getFullYear();
+    document.getElementById('displayMonth').innerText = curDate.getMonth() + 1;
+}
+
+function renderAll() {
+    renderCalendar();
+    renderWorkerList();
+}
+
+// 渲染日曆
+function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const y = curDate.getFullYear(), m = curDate.getMonth();
+    grid.innerHTML = "";
+    
+    // 空格填補
+    const firstDay = new Date(y, m, 1).getDay();
+    for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+
+    const daysInM = new Date(y, m+1, 0).getDate();
+    const today = new Date();
+
+    for(let d=1; d<=daysInM; d++) {
+        const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const hasWork = db.sites.some(s => s.date === dStr);
+        const isToday = (today.getFullYear()===y && today.getMonth()===m && today.getDate()===d);
+        
+        grid.innerHTML += `
+            <div class="day-cell ${isToday?'today':''} ${hasWork?'has-work':''}" onclick="selectDay('${dStr}')">
+                <div class="day-num">${d}</div>
+                <div class="day-dot"></div>
+            </div>`;
+    }
+}
+
+// 點擊日期顯示詳情
+function selectDay(dStr) {
+    selDateStr = dStr;
+    const box = document.getElementById('daySummary');
+    const list = document.getElementById('daySiteList');
+    document.getElementById('selDateTitle').innerText = `📅 ${dStr}`;
+    box.style.display = 'block';
+    
+    // 渲染該日案場
+    const sites = db.sites.filter(s => s.date === dStr);
+    if(sites.length === 0) {
+        list.innerHTML = `<p style="color:#999; text-align:center;">本日無紀錄</p>`;
+    } else {
+        list.innerHTML = "";
+        sites.forEach(s => {
+            list.innerHTML += `
+                <div class="card" style="padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div><b>${s.name}</b> <span style="font-size:0.8rem; color:#888">${s.workerIds.length}人</span></div>
+                    <button class="btn btn-danger" style="width:auto; margin:0; padding:8px 15px; font-size:12px;" onclick="delSite('${s.id}')">刪除</button>
+                </div>`;
+        });
+    }
+    // 滾動到下方
+    box.scrollIntoView({behavior: 'smooth'});
+}
+
+/* --- 4. 滾輪日期選擇器邏輯 (仿 iOS) --- */
+let tempY, tempM; // 暫存選擇
+
+function openDatePicker() {
+    const el = document.getElementById('datePicker');
+    const box = el.querySelector('.picker-box');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.opacity = 1; box.style.transform = 'translateY(0)'; }, 10);
+    
+    // 初始化滾輪
+    initWheel('yearWheel', 2020, 2035, curDate.getFullYear());
+    initWheel('monthWheel', 1, 12, curDate.getMonth() + 1);
+}
+
+function initWheel(id, min, max, curVal) {
+    const con = document.getElementById(id);
+    con.innerHTML = "";
+    // 前後加空白讓第一個和最後一個能置中
+    con.innerHTML += `<div style="height:80px;"></div>`;
+    for(let i=min; i<=max; i++) {
+        const item = document.createElement('div');
+        item.className = `wheel-item ${i === curVal ? 'selected' : ''}`;
+        item.innerText = i + (id==='monthWheel'?'月':'年');
+        item.dataset.val = i;
+        con.appendChild(item);
+    }
+    con.innerHTML += `<div style="height:80px;"></div>`;
+    
+    // 滾動到目前位置
+    const target = con.querySelector('.selected');
+    if(target) {
+        // 等待渲染後滾動
+        setTimeout(() => {
+             con.scrollTo({ top: target.offsetTop - 80, behavior: 'auto' });
+        }, 0);
+    }
+
+    // 監聽滾動事件 (Highlight效果)
+    con.onscroll = function() {
+        let center = con.scrollTop + 100; // 視窗中心點約略位置
+        let items = con.querySelectorAll('.wheel-item');
+        items.forEach(it => {
+            let top = it.offsetTop;
+            if (top > center - 30 && top < center + 30) {
+                items.forEach(x=>x.classList.remove('selected'));
+                it.classList.add('selected');
+                if(id === 'yearWheel') tempY = parseInt(it.dataset.val);
+                if(id === 'monthWheel') tempM = parseInt(it.dataset.val);
+            }
+        });
+    };
+}
+
+function closeDatePicker() {
+    const el = document.getElementById('datePicker');
+    const box = el.querySelector('.picker-box');
+    el.style.opacity = 0; box.style.transform = 'translateY(100%)';
+    setTimeout(() => el.style.display = 'none', 300);
+}
+
+function confirmDate() {
+    // 取得當前選中的值
+    const yEl = document.querySelector('#yearWheel .selected');
+    const mEl = document.querySelector('#monthWheel .selected');
+    if(yEl) curDate.setFullYear(parseInt(yEl.dataset.val));
+    if(mEl) curDate.setMonth(parseInt(mEl.dataset.val) - 1);
+    
+    updateDateDisplay();
+    renderAll();
+    closeDatePicker();
+}
+
+/* --- 5. 主題切換邏輯 --- */
+function renderThemeOpts() {
+    const c = document.getElementById('themeContainer');
+    c.innerHTML = "";
+    for(let k in THEMES) {
+        c.innerHTML += `<div class="theme-opt ${db.theme===k?'active':''}" 
+        style="background:${THEMES[k].grad}" onclick="applyTheme('${k}')"></div>`;
+    }
+}
+
+function applyTheme(key) {
+    db.theme = key;
+    const t = THEMES[key];
+    const r = document.documentElement;
+    r.style.setProperty('--primary', t.main);
+    r.style.setProperty('--primary-grad', t.grad);
+    r.style.setProperty('--bg-body', t.bg);
+    
+    if(t.mode === 'dark') r.setAttribute('data-mode', 'dark');
+    else r.removeAttribute('data-mode');
+    
+    renderThemeOpts();
+    saveData();
+}
+
+/* --- 6. 其他業務邏輯 (簡化版) --- */
+function openWorkerModal(id) {
+    let h = `<h3>${id?'編輯':'新增'}師傅</h3>
+    <input id="wName" class="input-f" style="border:1px solid #ddd; padding:10px; border-radius:10px; width:100%" placeholder="姓名">
+    <input id="wRate" type="number" class="input-f" style="border:1px solid #ddd; padding:10px; border-radius:10px; width:100%; margin-top:10px" placeholder="日薪">
+    <button class="btn btn-primary" onclick="saveWorker('${id||''}')">儲存</button>`;
+    
+    document.getElementById('modalContent').innerHTML = h;
+    document.getElementById('modalOverlay').style.display = 'block';
+    setTimeout(()=>document.getElementById('modalOverlay').style.opacity=1,10);
+    document.querySelector('#modalOverlay .picker-box').style.transform = 'translateY(0)';
+}
+
+function saveWorker(id) {
+    const name = document.getElementById('wName').value;
+    const rate = document.getElementById('wRate').value;
+    if(!name) return;
+    if(id) {
+        // Update
+    } else {
+        db.workers.push({ id: 'w'+Date.now(), name, rate });
+    }
+    saveData();
+    closeModal();
+    renderWorkerList();
+}
+
+function renderWorkerList() {
+    const list = document.getElementById('workerList');
+    list.innerHTML = "";
+    db.workers.forEach(w => {
+        list.innerHTML += `<div class="card" style="padding:15px; display:flex; justify-content:space-between">
+            <b>${w.name}</b><span>$${w.rate}/日</span>
+        </div>`;
+    });
+}
+
+function openSiteEdit(id) {
+    if(!selDateStr) return alert("請先點選日期");
+    let h = `<h3>新增案場 (${selDateStr})</h3>
+    <input id="sName" class="input-f" style="border:1px solid #ddd; padding:10px; border-radius:10px; width:100%" placeholder="案場名稱">
+    <div style="margin:10px 0; max-height:150px; overflow:auto;">`;
+    
+    db.workers.forEach(w => {
+        h += `<div style="padding:8px; border-bottom:1px solid #eee"><label><input type="checkbox" class="wk-chk" value="${w.id}"> ${w.name}</label></div>`;
+    });
+    
+    h += `</div><button class="btn btn-primary" onclick="saveSite()">儲存</button>`;
+    
+    document.getElementById('modalContent').innerHTML = h;
+    document.getElementById('modalOverlay').style.display = 'block';
+    setTimeout(()=>document.getElementById('modalOverlay').style.opacity=1,10);
+    document.querySelector('#modalOverlay .picker-box').style.transform = 'translateY(0)';
+}
+
+function saveSite() {
+    const name = document.getElementById('sName').value;
+    const chks = document.querySelectorAll('.wk-chk:checked');
+    const wIds = Array.from(chks).map(c => c.value);
+    
+    if(!name) return alert("請輸入名稱");
+    
+    db.sites.push({ id: 's'+Date.now(), date: selDateStr, name, workerIds: wIds });
+    saveData();
+    closeModal();
+    renderAll();
+    selectDay(selDateStr); // 重新載入詳情
+}
+
+function delSite(id) {
+    if(!confirm("確定刪除?")) return;
+    db.sites = db.sites.filter(s => s.id !== id);
+    saveData();
+    renderAll();
+    selectDay(selDateStr);
+}
+
+function closeModal() {
+    const el = document.getElementById('modalOverlay');
+    const box = el.querySelector('.picker-box');
+    box.style.transform = 'translateY(100%)';
+    el.style.opacity = 0;
+    setTimeout(()=>el.style.display='none', 300);
+}
+
+function switchPage(p, btn) {
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    document.getElementById('tab-'+p).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+}
+
+function masterReset() {
+    if(confirm("確定清空?")) { localStorage.removeItem('PRO_LEDGER_DB'); location.reload(); }
+}
+</script>
+</body>
+</html>
