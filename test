@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>工程帳本 Pro</title>
+    <style>
+        /* --- 藝術級 CSS 設定 --- */
+        :root {
+            --primary: #2563EB; /* 質感皇家藍 */
+            --primary-light: #EFF6FF;
+            --success: #10B981; /* 翡翠綠 */
+            --danger: #EF4444; /* 質感紅 */
+            --bg-body: #F8FAFC; /* 極淡冷灰背景 */
+            --bg-card: #FFFFFF;
+            --text-main: #1E293B;
+            --text-sub: #64748B;
+            --border: #E2E8F0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            padding-bottom: calc(80px + var(--safe-bottom));
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* --- 核心佈局 --- */
+        .app-container { max-width: 600px; margin: 0 auto; min-height: 100vh; position: relative; }
+        
+        /* --- 頂部導航 (Month Nav) --- */
+        .month-nav {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+        .month-nav h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; }
+        .nav-btn {
+            background: transparent; border: 1px solid var(--border);
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-sub); cursor: pointer; transition: all 0.2s;
+        }
+        .nav-btn:active { background: var(--bg-body); transform: scale(0.95); }
+
+        /* --- 頁面切換 --- */
+        .page { display: none; opacity: 0; animation: fadeIn 0.3s forwards; padding: 15px; }
+        .page.active { display: block; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* --- 卡片通用樣式 --- */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:active { transform: scale(0.99); }
+        
+        /* --- 日曆優化 --- */
+        .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; }
+        .week-header { 
+            text-align: center; font-weight: 600; font-size: 0.85rem; 
+            color: var(--text-sub); padding-bottom: 10px; 
+        }
+        .day-grid { gap: 8px; }
+        .day-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            min-height: 90px;
+            padding: 6px;
+            border: 1px solid transparent;
+            box-shadow: var(--shadow-sm);
+            display: flex; flex-direction: column;
+            cursor: pointer; position: relative;
+        }
+        .day-card.today { border-color: var(--primary); background: var(--primary-light); }
+        .day-num { font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+        
+        /* 案場標籤 - 膠囊樣式 */
+        .site-tag {
+            font-size: 10px; padding: 3px 6px; border-radius: 6px;
+            color: white; font-weight: 600; margin-top: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* --- 列表與輸入 --- */
+        .input-f {
+            width: 100%; padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg-body);
+            font-size: 16px; margin: 8px 0;
+            transition: border-color 0.2s; outline: none;
+            appearance: none;
+        }
+        .input-f:focus { border-color: var(--primary); background: #fff; }
+
+        .row-between { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px dashed var(--border); }
+        .row-between:last-child { border-bottom: none; }
+        
+        /* --- 按鈕美學 --- */
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            font-weight: 700; font-size: 16px; cursor: pointer;
+            transition: all 0.2s; margin-top: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-blue { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .btn-red { background: var(--danger); color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .btn-ghost { background: transparent; color: var(--text-sub); }
+
+        /* --- 特殊元件 --- */
+        .worker-item {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .worker-info b { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+        .worker-meta { font-size: 0.9rem; color: var(--text-sub); }
+        
+        /* FAB (Floating Action Button) */
+        .fab-btn {
+            position: fixed; bottom: calc(90px + var(--safe-bottom)); right: 20px;
+            width: 56px; height: 56px; border-radius: 28px;
+            background: var(--text-main); color: white;
+            border: none; box-shadow: var(--shadow-lg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; z-index: 90; cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .fab-btn:active { transform: scale(0.9) rotate(90deg); }
+
+        /* --- 底部導航 (Bottom Nav) --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; 
+            height: calc(65px + var(--safe-bottom));
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: space-around;
+            padding-bottom: var(--safe-bottom);
+            z-index: 100; max-width: 600px;
+        }
+        .nav-item {
+            flex: 1; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
+            color: #94A3B8; font-size: 10px; font-weight: 500;
+            cursor: pointer; transition: color 0.3s;
+        }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; stroke: currentColor; transition: transform 0.2s;}
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active svg { transform: translateY(-2px); stroke-width: 2.5px; }
+
+        /* --- iOS Style Modal (Bottom Sheet) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 2000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s;
+            display: flex; align-items: flex-end; justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        
+        .modal-box {
+            background: #fff; width: 100%; max-width: 600px;
+            max-height: 90vh; border-radius: 24px 24px 0 0;
+            padding: 25px; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .modal-overlay.show .modal-box { transform: translateY(0); }
+        
+        .modal-handle {
+            width: 40px; height: 5px; background: #E2E8F0;
+            border-radius: 3px; margin: 0 auto 20px auto;
+        }
+
+        /* --- Toast 通知 --- */
+        #toast-box {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 3000; display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            background: rgba(30, 41, 59, 0.9); color: white;
+            padding: 12px 24px; border-radius: 50px; font-size: 14px;
+            box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(-20px);
+            animation: toastIn 0.3s forwards; display: flex; align-items: center; gap: 8px;
+        }
+        @keyframes toastIn { to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 雜項調整 --- */
+        .text-price { color: var(--danger); font-weight: 700; font-family: 'SF Pro Display', sans-serif; }
+        .locked-input { background: #F1F5F9; color: #94A3B8; cursor: not-allowed; border: 1px dashed #CBD5E1; }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+        input[type="color"] { border: none; width: 40px; height: 40px; border-radius: 50%; padding: 0; overflow: hidden; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="toast-box"></div>
+
+    <header class="month-nav">
+        <button class="nav-btn" onclick="changeMonth(-1)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <h2 id="monthTitle"></h2>
+        <button class="nav-btn" onclick="changeMonth(1)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+    </header>
+
+    <main class="content-area">
+        <section id="tab-cal" class="page active">
+            <div class="card" style="padding: 10px 10px 20px 10px;">
+                <div class="grid-7 week-header" id="weekLabels">
+                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+                <div id="calendarGrid" class="grid-7 day-grid"></div>
+            </div>
+        </section>
+
+        <section id="tab-work" class="page">
+            <div class="card" onclick="openPaymentModal()" style="background: linear-gradient(135deg, #1E293B, #0F172A); color: white; cursor: pointer;">
+                <div style="opacity: 0.7; font-size: 0.9rem;">本月總支出預估</div>
+                <div style="font-size: 2.5rem; font-weight: 800; margin: 5px 0;" id="totalExp">$0</div>
+                <div id="payStatusLabel" style="color: var(--success); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;"></div>
+            </div>
+            
+            <div class="card">
+                <input type="text" id="workerSearch" class="input-f" placeholder="🔍 搜尋師傅姓名..." oninput="renderWorkerList()" style="margin-top:0;">
+                <input type="date" id="dateSearch" class="input-f" onchange="renderWorkerList()" style="margin-bottom:0;">
+            </div>
+
+            <button class="btn btn-blue" onclick="openWorkerModal(null)">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                新增師傅檔案
+            </button>
+            <div id="workerList" style="margin-top: 20px;"></div>
+            
+            <button class="fab-btn" onclick="openMultiExtra()">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"></path></svg>
+            </button>
+        </section>
+
+        <section id="tab-set" class="page">
+            <div class="card">
+                <h3 style="margin-top:0">🎨 介面自定義</h3>
+                <div class="row-between"><span>日期標題顏色</span><input type="color" id="cfg-date" onchange="updateUI('date', this.value)"></div>
+                <div class="row-between"><span>星期標題顏色</span><input type="color" id="cfg-week" onchange="updateUI('week', this.value)"></div>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0">☁️ 雲端同步 (Google Sheets)</h3>
+                <div style="font-size: 0.9rem; color: var(--text-sub); margin-bottom: 10px;">連結 GAS API 以達成多裝置同步。</div>
+                <div class="row-between"><span>鎖定網址並記憶</span><input type="checkbox" id="gasLock" onchange="toggleGasLock()"></div>
+                <input type="text" id="gasUrlInp" class="input-f" placeholder="請貼上 GAS Web App 網址">
+            </div>
+            <button class="btn btn-red" onclick="masterReset()">⚠️ 一鍵重設所有資料</button>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('cal', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>日曆</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('work', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>人員</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('set', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>設定</span>
+        </div>
+    </nav>
+
+    <div id="modalOverlay" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* --- JS 核心 --- */
+let db = {
+    workers: [], sites: [], extras: [], payments: {},
+    ui: { date: '#1E293B', week: '#64748B' } // 移除了背景設定，改用 CSS 變數
+};
+
+let curMonth = new Date();
+let gasUrl = "";
+
+window.onload = async () => {
+    // 設置當前月份
+    curMonth.setDate(1);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const gasFromUrl = urlParams.get('gas');
+    const gasFromLocal = localStorage.getItem('CONSTR_GAS_2026');
+    
+    gasUrl = gasFromUrl || gasFromLocal || "";
+
+    if (gasUrl) {
+        const inp = document.getElementById('gasUrlInp');
+        const lock = document.getElementById('gasLock');
+        if(inp) {
+            inp.value = gasUrl;
+            inp.disabled = true;
+            inp.classList.add('locked-input');
+        }
+        if(lock) lock.checked = true;
+        localStorage.setItem('CONSTR_GAS_2026', gasUrl);
+        await fetchCloud();
+    } else {
+        // 本地讀取
+        const localData = localStorage.getItem('CONSTR_DB_LOCAL');
+        if(localData) db = JSON.parse(localData);
+    }
+    applyUI();
+    renderAll();
+};
+
+function showToast(msg, type='info') {
+    const box = document.getElementById('toast-box');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    const icon = type === 'success' ? '✅' : 'ℹ️';
+    el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+    box.appendChild(el);
+    setTimeout(() => { el.remove(); }, 3000);
+}
+
+// 數據保存代理
+function saveData() {
+    localStorage.setItem('CONSTR_DB_LOCAL', JSON.stringify(db));
+    syncCloud();
+}
+
+async function fetchCloud() {
+    if (!gasUrl) return;
+    try {
+        showToast("正在同步雲端...", "info");
+        const res = await fetch(gasUrl);
+        const data = await res.json();
+        if (data && data.workers) { 
+            db = data; 
+            applyUI(); 
+            renderAll();
+            showToast("雲端同步完成", "success");
+        }
+    } catch (e) { console.warn("雲端讀取失敗"); showToast("無法連接雲端", "error"); }
+}
+
+async function syncCloud() {
+    if (!gasUrl || !gasUrl.startsWith('http')) return;
+    try {
+        await fetch(gasUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
+    } catch (e) { console.error("雲端同步失敗"); }
+}
+
+function toggleGasLock() {
+    const isLocked = document.getElementById('gasLock').checked;
+    const inputEl = document.getElementById('gasUrlInp');
+    const rawUrl = inputEl.value.trim();
+
+    if (isLocked) {
+        if (!rawUrl || !rawUrl.startsWith('http')) {
+            showToast("請輸入有效網址", "error");
+            document.getElementById('gasLock').checked = false;
+            return;
+        }
+        gasUrl = rawUrl;
+        localStorage.setItem('CONSTR_GAS_2026', gasUrl);
+        const currentBaseUrl = window.location.href.split('?')[0];
+        const persistentUrl = currentBaseUrl + "?gas=" + encodeURIComponent(gasUrl);
+
+        if (confirm("🔒 確定鎖定？將重整頁面。")) {
+            window.location.href = persistentUrl;
+        }
+    } else {
+        if (confirm("🔓 解除鎖定會清除記憶的網址，確定嗎？")) {
+            localStorage.removeItem('CONSTR_GAS_2026');
+            window.location.href = window.location.href.split('?')[0];
+        } else {
+            document.getElementById('gasLock').checked = true;
+        }
+    }
+}
+
+function renderAll() { renderCalendar(); renderWorkerList(); }
+
+function switchPage(p, el) {
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.nav-item').
