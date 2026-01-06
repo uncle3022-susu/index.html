@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v2</title>
+    <title>工程帳本 Ultimate V3</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -15,7 +15,7 @@
             
             /* 背景邏輯 */
             --bg-cal: rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.4);
-            --bg-std: #F8F9FA; /* 人員與設定頁的背景 */
+            --bg-std: #F8F9FA; 
             
             --bg-card: #FFFFFF;
             --text-main: #333333;
@@ -28,7 +28,7 @@
 
         /* 深色模式變數 */
         [data-mode="dark"] {
-            --bg-cal: rgba(0, 0, 0, 0.85); /* 深色模式下的日曆背景 */
+            --bg-cal: rgba(0, 0, 0, 0.85); 
             --bg-std: #121212;
             --bg-card: #1E1E1E;
             --text-main: #E0E0E0;
@@ -41,7 +41,7 @@
         
         body { 
             margin: 0; 
-            background: var(--bg-std); /* 預設背景 */
+            background: var(--bg-std); 
             color: var(--text-main); 
             padding-bottom: calc(90px + var(--safe-bottom)); 
             overflow-x: hidden; 
@@ -64,7 +64,6 @@
         }
         .date-trigger::after { content: "▼"; font-size: 0.7rem; color: var(--text-sub); margin-top: 2px; }
 
-        /* 深色模式切換按鈕 */
         .mode-toggle {
             background: transparent; border: 1px solid var(--border); 
             width: 36px; height: 36px; border-radius: 50%;
@@ -96,13 +95,11 @@
             overflow: hidden;
         }
         
-        /* 當日日期: 小反灰 */
         .day-num { 
             font-size: 1rem; font-weight: 500; margin-bottom: 3px; 
             width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; 
             border-radius: 50%; z-index: 2; flex-shrink: 0;
         }
-        /* 重點：今日顯示樣式 */
         .day-cell.today .day-num { background: #E0E0E0; color: #333; font-weight: bold; } 
         .is-weekend { color: var(--danger); }
 
@@ -122,7 +119,6 @@
             display: flex; flex-direction: column; justify-content: center; 
             box-shadow: var(--shadow); cursor: pointer; position: relative; overflow: hidden; 
         }
-        /* 移除圖示，保持簡潔 */
         .dash-card.left { background: #546E7A; }
         .dash-card.right { background: #263238; }
         .dash-label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px; }
@@ -130,12 +126,11 @@
 
         .worker-card { display: flex; justify-content: space-between; align-items: center; padding: 18px; margin-bottom: 10px; border: 1px solid var(--border); }
         
-        /* 按鈕優化: 漸層回歸 */
+        /* 按鈕優化 */
         .btn { 
             width: 100%; padding: 14px; border: none; border-radius: 14px; 
             font-weight: 700; font-size: 16px; cursor: pointer; color: white; 
             margin-top: 10px; 
-            /* 漸層背景 */
             background: linear-gradient(135deg, var(--primary), rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.7));
             box-shadow: 0 4px 12px rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.3); 
             transition: transform 0.1s, box-shadow 0.2s; 
@@ -167,18 +162,9 @@
         }
         .picker-col { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; text-align: center; padding: 90px 0; }
         .picker-col::-webkit-scrollbar { display: none; }
-        
-        .picker-item { 
-            height: 40px; line-height: 40px; scroll-snap-align: center; 
-            font-size: 1.1rem; color: var(--text-sub); transition: all 0.1s; 
-        }
-        .picker-item.active { 
-            color: var(--text-main); font-size: 1.5rem; font-weight: 800; transform: scale(1.1); 
-        }
-        .picker-highlight { 
-            position: absolute; top: 50%; left: 0; width: 100%; height: 40px; margin-top: -20px; 
-            background: rgba(128,128,128,0.05); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); pointer-events: none; 
-        }
+        .picker-item { height: 40px; line-height: 40px; scroll-snap-align: center; font-size: 1.1rem; color: var(--text-sub); transition: all 0.1s; }
+        .picker-item.active { color: var(--text-main); font-size: 1.5rem; font-weight: 800; transform: scale(1.1); }
+        .picker-highlight { position: absolute; top: 50%; left: 0; width: 100%; height: 40px; margin-top: -20px; background: rgba(128,128,128,0.05); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); pointer-events: none; }
 
         /* --- 6. Quick Add Modal --- */
         .modal-box {
@@ -186,11 +172,7 @@
             border-radius: 24px; padding: 24px; overflow-y: auto; position: relative;
             transform: scale(0.95); transition: transform 0.2s;
         }
-        .modal-close { 
-            position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; 
-            display:flex; align-items:center; justify-content:center; 
-            background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer; 
-        }
+        .modal-close { position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; display:flex; align-items:center; justify-content:center; background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer; }
         
         .quick-site-row {
             display: flex; justify-content: space-between; align-items: center;
@@ -200,19 +182,16 @@
         }
         .quick-site-row:active { background: var(--bg-std); }
 
-        /* --- 7. 設定 & 主題球 (單排 7 顆) --- */
+        /* --- 7. 設定 & 主題球 (單排) --- */
         .theme-grid { 
-            display: grid; 
-            grid-template-columns: repeat(7, 1fr); /* 強制7列 */
-            gap: 8px; margin: 15px 0; 
-            justify-items: center;
+            display: flex; justify-content: space-between; 
+            padding: 0 5px; margin: 15px 0; 
         }
         .theme-dot { 
-            width: 100%; aspect-ratio: 1; /* 保持正圓 */
-            border-radius: 50%; cursor: pointer; border: 3px solid transparent; 
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; 
             transition: transform 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
         }
-        .theme-dot.active { transform: scale(1.15); border-color: var(--text-main); }
+        .theme-dot.active { transform: scale(1.2); border-color: var(--text-main); }
 
         /* 底部導航 */
         .bottom-nav {
@@ -224,14 +203,14 @@
         .nav-item.active { color: var(--primary); font-weight: bold; }
         .nav-item svg { width: 26px; height: 26px; margin-bottom: 4px; fill: currentColor; }
 
-        /* SVG Icon Style (Outline/Wireframe) */
+        /* SVG Icon Style (Outline) */
         .icon-svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-svg-sm { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
 
         /* Checkbox list style */
         .chk-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px dashed var(--border); }
         .chk-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--primary); }
 
-        /* 浮動按鈕 */
         .fab-btn {
             position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px;
             width: 56px; height: 56px; border-radius: 50%;
@@ -269,7 +248,7 @@
                 <div class="dash-card left" onclick="openPaymentModal()">
                     <div class="dash-label">案場請款</div>
                     <div class="dash-val">查看</div>
-                    </div>
+                </div>
                 <div class="dash-card right">
                     <div class="dash-label">本月總支出</div>
                     <div class="dash-val" id="totalExp">$0</div>
@@ -298,14 +277,20 @@
 
         <section id="tab-set" class="page">
             <div class="card">
-                <h3>🎨 選擇主題顏色</h3>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="10.5" r="2.5"></circle><circle cx="8.5" cy="7.5" r="2.5"></circle><circle cx="6.5" cy="12.5" r="2.5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
+                    <h3>主題顏色</h3>
+                </div>
                 <div class="theme-grid" id="themeBox"></div>
             </div>
 
             <div class="card">
-                <h3>☁️ 雲端資料庫</h3>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                    <h3>雲端資料庫</h3>
+                </div>
                 <div class="chk-row">
-                    <span>🔒 鎖定網址</span>
+                    <span style="display:flex;align-items:center;gap:5px"><svg class="icon-svg-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> 鎖定網址</span>
                     <input type="checkbox" id="gasLock" onchange="toggleGasLock()">
                 </div>
                 <input id="gasUrl" class="input-f" placeholder="Google Apps Script URL">
@@ -313,24 +298,27 @@
             </div>
 
             <div class="card">
-                <h3>⚠️ 危險操作</h3>
-                <button class="btn btn-danger" onclick="masterReset()">⚠️ 重置所有資料</button>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; color:var(--danger)">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <h3>危險操作</h3>
+                </div>
+                <button class="btn btn-danger" onclick="masterReset()" style="display:flex;align-items:center;justify-content:center;gap:10px">
+                    <svg class="icon-svg" viewBox="0 0 24 24" style="color:white"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    重置所有資料
+                </button>
             </div>
         </section>
     </main>
 
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-cal" onclick="switchPage('cal')">
-            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>
-            日曆
+            <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>日曆
         </div>
         <div class="nav-item" id="nav-work" onclick="switchPage('work')">
-            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            人員
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>人員
         </div>
         <div class="nav-item" id="nav-set" onclick="switchPage('set')">
-            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            設定
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>設定
         </div>
     </nav>
 
@@ -355,12 +343,9 @@
                 <svg class="icon-svg" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </div>
             <h3 id="quickDateTitle" style="margin-top:0; margin-bottom:15px;"></h3>
-            
             <button class="btn" style="background: linear-gradient(135deg, #a8a8a8, #888); margin-bottom:15px;" onclick="openSiteModal(null)">+ 新增案場</button>
-            
             <div style="font-size:0.85rem; color:var(--text-sub); margin-bottom:8px;">或複製本月曾經新增過的案場：</div>
             <div id="quickSiteList" style="max-height:200px; overflow-y:auto;"></div>
-
             <hr style="border-top:1px dashed var(--border); margin:15px 0;">
             <div style="font-size:0.85rem; color:var(--text-main); font-weight:bold; margin-bottom:8px;">當日已安排：</div>
             <div id="dayExistList"></div>
@@ -376,15 +361,12 @@
             <input id="sId" type="hidden">
             <input id="sDate" type="hidden">
             <input id="sName" class="input-f" placeholder="案場名稱">
-            
             <div id="sColorBox" class="theme-grid" style="margin-bottom:15px"></div>
-
             <div style="display:flex; justify-content:space-between; margin-bottom:10px">
                 <b>上工師傅</b>
                 <input id="sWorkerFilter" style="padding:4px; font-size:12px; width:100px; border:1px solid var(--border); border-radius:6px; background:var(--bg-std); color:var(--text-main)" placeholder="搜尋..." oninput="renderSiteWorkerSelect()">
             </div>
             <div id="sWorkerList" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); padding:10px; border-radius:10px; margin-bottom:15px;"></div>
-
             <button class="btn" onclick="saveSite()">儲存</button>
             <button id="btnDelSite" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delSite()">刪除</button>
         </div>
@@ -397,9 +379,8 @@
             </div>
             <h3>師傅資料</h3>
             <input id="wId" type="hidden">
-            
             <div class="chk-row">
-                <span>⭐ 置頂顯示</span>
+                <span style="display:flex;align-items:center;gap:5px"><svg class="icon-svg-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> 置頂顯示</span>
                 <input type="checkbox" id="wTop">
             </div>
             <input id="wName" class="input-f" placeholder="姓名">
@@ -447,12 +428,10 @@
             <input id="meDate" type="date" class="input-f">
             <input id="meName" class="input-f" placeholder="項目">
             <input id="meAmt" type="number" class="input-f" placeholder="金額">
-            
             <div style="margin:10px 0;">
                 <input id="meFilter" class="input-f" placeholder="搜尋師傅..." oninput="renderMeList()">
             </div>
             <div id="meList" style="max-height:200px; overflow-y:auto; border:1px solid var(--border); padding:10px; border-radius:10px;"></div>
-            
             <button class="btn" onclick="saveMultiExtra()">完成</button>
         </div>
     </div>
@@ -470,15 +449,14 @@
     </div>
 
 <script>
-/* --- 系統核心邏輯 --- */
 const THEMES = [
-    { r:91, g:154, b:139, hex:'#5B9A8B' }, // 抹茶綠
-    { r:244, g:196, b:48, hex:'#F4C430' }, // 黃
-    { r:77, g:182, b:172, hex:'#4DB6AC' }, // 藍綠
-    { r:244, g:143, b:177, hex:'#F48FB1' }, // 粉紅
-    { r:121, g:134, b:203, hex:'#7986CB' }, // 紫
-    { r:229, g:115, b:115, hex:'#E57373' }, // 紅
-    { r:63, g:81, b:181, hex:'#3F51B5' }  // 深藍
+    { r:91, g:154, b:139, hex:'#5B9A8B' }, 
+    { r:244, g:196, b:48, hex:'#F4C430' }, 
+    { r:77, g:182, b:172, hex:'#4DB6AC' }, 
+    { r:244, g:143, b:177, hex:'#F48FB1' }, 
+    { r:121, g:134, b:203, hex:'#7986CB' }, 
+    { r:229, g:115, b:115, hex:'#E57373' }, 
+    { r:63, g:81, b:181, hex:'#3F51B5' }
 ];
 
 let db = {
@@ -490,19 +468,15 @@ let curDate = new Date();
 let selectedDateStr = "";
 
 window.onload = async () => {
-    const local = localStorage.getItem('ENG_LEDGER_FINAL_V2');
+    const local = localStorage.getItem('ENG_LEDGER_V3');
     if(local) db = JSON.parse(local);
     
-    // 初始化外觀
     applyTheme(db.settings.theme);
     if(db.settings.darkMode) toggleDarkMode(true);
 
     renderPickerWheels();
     updateHeaderDate();
-    
-    // 預設頁面渲染
     switchPage('cal'); 
-    
     initGestures();
 
     if(db.settings.gasUrl) {
@@ -514,7 +488,7 @@ window.onload = async () => {
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_FINAL_V2', JSON.stringify(db));
+    localStorage.setItem('ENG_LEDGER_V3', JSON.stringify(db));
     syncCloud(false);
 }
 
@@ -536,17 +510,14 @@ async function syncCloud(isPull) {
 }
 
 function renderAll() {
-    // 根據當前頁面渲染
     if(document.getElementById('tab-cal').classList.contains('active')) renderCalendar();
     if(document.getElementById('tab-work').classList.contains('active')) renderWorkerList();
     if(document.getElementById('tab-set').classList.contains('active')) renderThemeGrid();
     renderSiteColorBox();
 }
 
-/* --- 深色模式 --- */
 function toggleDarkMode(forceState) {
     const isDark = typeof forceState === 'boolean' ? forceState : !document.body.hasAttribute('data-mode');
-    
     if (isDark) {
         document.body.setAttribute('data-mode', 'dark');
         document.getElementById('iconMoon').style.display = 'none';
@@ -556,12 +527,10 @@ function toggleDarkMode(forceState) {
         document.getElementById('iconMoon').style.display = 'block';
         document.getElementById('iconSun').style.display = 'none';
     }
-    
     db.settings.darkMode = isDark;
     if(typeof forceState !== 'boolean') saveDB();
 }
 
-/* --- 手勢 (Swipe) --- */
 function initGestures() {
     const cal = document.getElementById('calWrapper');
     let startX = 0;
@@ -580,7 +549,6 @@ function changeMonth(dir) {
     renderCalendar();
 }
 
-/* --- 日曆邏輯 --- */
 function updateHeaderDate() {
     document.getElementById('dispYear').innerText = curDate.getFullYear();
     document.getElementById('dispMonth').innerText = curDate.getMonth() + 1;
@@ -608,7 +576,6 @@ function renderCalendar() {
         if (isToday) cell.classList.add('today');
         
         let numHtml = `<div class="day-num ${dayOfWeek===0||dayOfWeek===6 ? 'is-weekend':''}">${d}</div>`;
-        
         const daySites = db.sites.filter(s => s.date === dateStr);
         let tagsHtml = '';
         daySites.forEach(s => {
@@ -620,7 +587,6 @@ function renderCalendar() {
         cell.onclick = () => openQuickAdd(dateStr);
         grid.appendChild(cell);
     }
-    
     setTimeout(resizeTags, 10);
 }
 
@@ -635,7 +601,6 @@ function resizeTags() {
     });
 }
 
-/* --- Quick Add Logic --- */
 function openQuickAdd(dateStr) {
     selectedDateStr = dateStr;
     document.getElementById('quickDateTitle').innerText = dateStr;
@@ -659,7 +624,6 @@ function openQuickAdd(dateStr) {
     
     const quickList = document.getElementById('quickSiteList');
     quickList.innerHTML = "";
-    
     uniqueMap.forEach((s, name) => {
         const row = document.createElement('div');
         row.className = 'quick-site-row';
@@ -688,11 +652,9 @@ function cloneSiteAndEdit(templateSite, targetDate) {
     setTimeout(() => openSiteModal(newSite.id), 200); 
 }
 
-/* --- iOS 滾輪 --- */
 function renderPickerWheels() {
     const wy = document.getElementById('wheelY');
     const wm = document.getElementById('wheelM');
-    
     for(let i=2020; i<=2035; i++) {
         const div = document.createElement('div');
         div.className = 'picker-item'; div.innerText = i + '年'; div.dataset.val = i;
@@ -711,16 +673,11 @@ function updatePickerFocus(e) {
     const center = el.scrollTop + 110; 
     let minDiff = Infinity;
     let closestItem = null;
-    
     el.querySelectorAll('.picker-item').forEach(it => {
         const itemCenter = it.offsetTop + it.offsetHeight / 2;
         const diff = Math.abs(center - itemCenter);
-        if(diff < minDiff) {
-            minDiff = diff;
-            closestItem = it;
-        }
+        if(diff < minDiff) { minDiff = diff; closestItem = it; }
     });
-
     el.querySelectorAll('.picker-item').forEach(it => it.classList.remove('active'));
     if(closestItem) closestItem.classList.add('active');
 }
@@ -731,7 +688,6 @@ function openDatePicker() {
     el.style.transform = 'translateY(0)';
     overlay.style.display = 'flex';
     setTimeout(()=>overlay.style.opacity=1, 10);
-    
     setTimeout(() => {
         const wy = document.getElementById('wheelY');
         const wm = document.getElementById('wheelM');
@@ -762,45 +718,35 @@ function confirmDate() {
     closePicker();
 }
 
-/* --- 案場請款 --- */
 function openPaymentModal() {
     const list = document.getElementById('payList');
     list.innerHTML = "";
-    
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const monthSites = db.sites.filter(s => s.date.startsWith(ym));
     const uniqueNames = [...new Set(monthSites.map(s => s.name))];
-    
     uniqueNames.forEach(name => {
         const sitesWithName = monthSites.filter(s => s.name === name);
         const allPaid = sitesWithName.every(s => db.payments.some(p => p.siteId === s.id));
-        
         const div = document.createElement('div');
         div.className = 'card';
         div.style.padding = '12px';
         div.style.marginBottom = '8px';
         div.style.display = 'flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
         div.style.borderLeft = allPaid ? '5px solid #ccc' : '5px solid ' + THEMES[db.settings.theme].hex;
-        
         div.innerHTML = `<b>${name}</b> <input type="checkbox" ${allPaid?'checked':''} onchange="toggleGroupPay('${name}', this)">`;
         list.appendChild(div);
     });
-    
     if(uniqueNames.length === 0) list.innerHTML = "<div style='text-align:center;color:var(--text-sub)'>本月無案場</div>";
     openModal('modalPayment');
 }
 
 function toggleGroupPay(name, checkbox) {
     const isChecked = checkbox.checked;
-    
-    // 取消請款時的確認視窗
     if (!isChecked) {
         if (!confirm("確定要取消「已請款」狀態嗎？")) {
-            checkbox.checked = true; // 恢復勾選
-            return;
+            checkbox.checked = true; return;
         }
     }
-
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const targetSites = db.sites.filter(s => s.date.startsWith(ym) && s.name === name);
     targetSites.forEach(s => {
@@ -813,18 +759,14 @@ function toggleGroupPay(name, checkbox) {
     saveDB(); openPaymentModal();
 }
 
-/* --- 案場編輯 --- */
 function openSiteModal(siteId) {
     closeModal('modalQuickAdd');
     openModal('modalSite');
-    
     const s = siteId ? db.sites.find(x => x.id === siteId) : { id: '', name: '', colorIdx: 0, workers: [] };
-    
     document.getElementById('sId').value = s.id;
     document.getElementById('sDate').value = selectedDateStr;
     document.getElementById('sName').value = s.name;
     document.getElementById('btnDelSite').style.display = siteId ? 'block' : 'none';
-    
     renderSiteColorBox(s.colorIdx);
     renderSiteWorkerSelect(s.workers);
 }
@@ -834,8 +776,9 @@ function renderSiteWorkerSelect(currentWorkers = []) {
     const list = document.getElementById('sWorkerList');
     list.innerHTML = "";
     const currentIds = currentWorkers.map(w => w.id);
-    
     db.workers.forEach(w => {
+        // Soft delete Logic: Don't show deleted workers for new selection
+        if(w.isDeleted) return; 
         if(w.name.toLowerCase().includes(filter)) {
             const row = document.createElement('div');
             row.className = 'chk-row';
@@ -849,7 +792,6 @@ function saveSite() {
     const id = document.getElementById('sId').value;
     const date = document.getElementById('sDate').value;
     const name = document.getElementById('sName').value;
-    
     if(!name) return alert("請輸入名稱");
     
     const activeDot = document.querySelector('#sColorBox .active');
@@ -866,12 +808,8 @@ function saveSite() {
     });
 
     const data = { id: id || 's'+Date.now(), date, name, colorIdx, workers: newWorkers };
-    
-    if(id) {
-        const idx = db.sites.findIndex(x => x.id === id);
-        db.sites[idx] = data;
-    } else db.sites.push(data);
-    
+    if(id) db.sites[db.sites.findIndex(x => x.id === id)] = data;
+    else db.sites.push(data);
     saveDB(); closeModal('modalSite'); renderCalendar();
 }
 
@@ -883,7 +821,6 @@ function delSite(id) {
     }
 }
 
-/* --- 師傅與邏輯 --- */
 function renderWorkerList() {
     const wSearch = document.getElementById('wSearch').value.toLowerCase();
     const dFilter = document.getElementById('wDateFilter').value;
@@ -896,9 +833,7 @@ function renderWorkerList() {
     
     let validWorkerIds = null;
     if(dFilter) {
-        validWorkerIds = db.sites
-            .filter(s => s.date === dFilter)
-            .flatMap(s => s.workers.map(w => w.id));
+        validWorkerIds = db.sites.filter(s => s.date === dFilter).flatMap(s => s.workers.map(w => w.id));
     }
 
     sorted.forEach(w => {
@@ -908,24 +843,24 @@ function renderWorkerList() {
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let salary = 0;
         monthSites.forEach(s => salary += Number(s.workers.find(sw => sw.id === w.id).snapshotRate));
-        
         const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
         const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
-        
         const total = salary + extraSum;
         totalExp += total;
         
+        // Soft Delete: 只有當本月無任何紀錄且已被刪除時才隱藏
+        if (w.isDeleted && total === 0) return;
+
         const card = document.createElement('div');
         card.className = 'worker-card card';
         card.style.padding = '15px';
         card.innerHTML = `
-            <div><b>${w.isTop?'⭐ ':''}${w.name}</b><div style="font-size:0.85rem;color:var(--text-sub);margin-top:4px">${monthSites.length} 天上工</div></div>
+            <div><b>${w.isTop?'<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ':''}${w.name}</b><div style="font-size:0.85rem;color:var(--text-sub);margin-top:4px">${monthSites.length} 天上工</div></div>
             <div style="font-size:1.2rem;font-weight:800">$${total.toLocaleString()}</div>
         `;
         card.onclick = () => openWorkerModal(w.id);
         list.appendChild(card);
     });
-    
     document.getElementById('totalExp').innerText = `$${totalExp.toLocaleString()}`;
 }
 
@@ -947,12 +882,10 @@ function openWorkerModal(id) {
         let workPay = monthSites.reduce((acc, s) => acc + Number(s.workers.find(sw => sw.id === w.id).snapshotRate), 0);
         const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
         const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
-        
         document.getElementById('wWorkDays').innerText = monthSites.length;
         document.getElementById('wWorkPay').innerText = workPay.toLocaleString();
         document.getElementById('wExtraTotal').innerText = extraSum.toLocaleString();
         document.getElementById('wFinalPay').innerText = (workPay + extraSum).toLocaleString();
-        
         const exList = document.getElementById('wExtraList');
         exList.innerHTML = "";
         monthExtras.forEach(ex => {
@@ -974,26 +907,33 @@ function saveWorker() {
         rate: document.getElementById('wRate').value,
         isTop: document.getElementById('wTop').checked,
         phone: document.getElementById('wPhone').value,
-        note: document.getElementById('wNote').value
+        note: document.getElementById('wNote').value,
+        isDeleted: false // Ensure active
     };
     if(!name) return alert('請輸入姓名');
     
-    if(id) db.workers[db.workers.findIndex(x => x.id === id)] = data;
-    else db.workers.push(data);
-    
+    if(id) {
+        const idx = db.workers.findIndex(x => x.id === id);
+        // 保留原有的 isDeleted 狀態 (雖然這裡按儲存通常意味著是活耀的，但安全起見)
+        // 實際上如果是編輯，應該不改變 isDeleted，除非我們想「復活」他?
+        // 簡單邏輯：按儲存=復活
+        db.workers[idx] = { ...db.workers[idx], ...data };
+    } else {
+        db.workers.push(data);
+    }
     saveDB(); closeModal('modalWorker'); renderWorkerList();
 }
 
 function delWorker() {
-    if(confirm('刪除師傅？')) {
+    if(confirm('確定刪除？(這將使該師傅不再出現於未來名單，但保留歷史帳目)')) {
         const id = document.getElementById('wId').value;
-        db.workers = db.workers.filter(x => x.id !== id);
-        db.extras = db.extras.filter(e => e.wid !== id);
+        // Soft Delete
+        const w = db.workers.find(x => x.id === id);
+        if(w) w.isDeleted = true;
         saveDB(); closeModal('modalWorker'); renderWorkerList();
     }
 }
 
-/* --- 雜費 & 多人雜費 --- */
 function toggleAddExtra() {
     const box = document.getElementById('addExtraBox');
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -1017,6 +957,7 @@ function renderMeList() {
     const list = document.getElementById('meList');
     list.innerHTML = "";
     db.workers.forEach(w => {
+        if(w.isDeleted) return; // Don't show deleted workers
         if(w.name.toLowerCase().includes(filter)) {
             const div = document.createElement('div'); div.className = 'chk-row';
             div.innerHTML = `<span>${w.name}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
@@ -1034,7 +975,6 @@ function saveMultiExtra() {
     saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
 }
 
-/* --- 系統設定 --- */
 function renderThemeGrid() {
     const box = document.getElementById('themeBox');
     box.innerHTML = "";
@@ -1074,10 +1014,9 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V2'); location.reload(); }
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_V3'); location.reload(); }
 }
 
-/* --- Modal Helper --- */
 function openModal(id) {
     const m = document.getElementById(id);
     m.style.display = 'flex'; setTimeout(() => m.style.opacity = 1, 10);
@@ -1092,7 +1031,6 @@ function switchPage(pid) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('nav-'+pid).classList.add('active');
     
-    // 背景色切換邏輯
     if(pid === 'cal') {
         document.body.style.background = 'var(--bg-cal)';
         renderCalendar();
