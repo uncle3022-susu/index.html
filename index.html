@@ -5,154 +5,189 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate</title>
+    <title>工程帳本 Ultimate Reborn</title>
     <style>
         /* --- 1. 核心變數 & 主題系統 --- */
         :root {
-            /* 預設主題：抹茶綠 */
-            --primary: #5B9A8B; 
-            --primary-light: #E0F2F1;
-            --primary-grad: linear-gradient(135deg, #5B9A8B, #4DB6AC);
-            --bg-body: #F8F9FA;
+            /* 預設: 抹茶綠 RGB */
+            --theme-rgb: 91, 154, 139; 
+            --primary: rgb(var(--theme-rgb));
+            --bg-body: rgba(var(--theme-rgb), 0.4); /* 需求: 主題色 40% 透明 */
+            
             --bg-card: #FFFFFF;
             --text-main: #333333;
             --text-sub: #888888;
             --border: #EEEEEE;
-            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow: 0 4px 15px rgba(0,0,0,0.06);
             --danger: #FF6B6B;
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
         /* 基礎設定 */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { margin: 0; background: var(--bg-body); color: var(--text-main); padding-bottom: calc(90px + var(--safe-bottom)); overflow-x: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif; }
+        body { margin: 0; background: var(--bg-body); color: var(--text-main); padding-bottom: calc(90px + var(--safe-bottom)); overflow-x: hidden; transition: background 0.3s ease; }
 
-        /* --- 2. 佈局元件 --- */
+        /* --- 2. 頂部導航 --- */
         .app-header {
-            position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 50; 
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 1px 0 rgba(0,0,0,0.05);
         }
         
         .date-trigger {
-            font-size: 1.3rem; font-weight: 800; color: var(--text-main);
-            background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;
+            font-size: 1.4rem; font-weight: 800; color: var(--text-main);
+            background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
         }
-        .date-trigger::after { content: "▼"; font-size: 0.7rem; color: #ccc; }
+        .date-trigger::after { content: "▼"; font-size: 0.7rem; color: #999; margin-top: 2px; }
 
         .page { display: none; padding: 15px; animation: fadeIn 0.3s ease; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); position: relative; }
+        .card { background: var(--bg-card); border-radius: 18px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); position: relative; }
 
-        /* --- 3. 日曆系統 (強制 Grid) --- */
-        .cal-container { width: 100%; overflow: hidden; }
+        /* --- 3. 日曆系統 (Grid + 手勢 + 自適應高度) --- */
+        .cal-wrapper { touch-action: pan-y pinch-zoom; /* 允許垂直滾動，水平交給手勢 */ }
         .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; }
         
         .week-header { 
-            text-align: center; font-size: 0.85rem; color: var(--text-sub); 
-            padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 5px;
-            white-space: nowrap; /* 禁止換行 */
+            text-align: center; font-size: 0.8rem; color: var(--text-sub); 
+            padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+            white-space: nowrap; 
         }
-        .week-item { text-align: center; }
         
         .day-cell {
-            min-height: 85px; border-radius: 12px; padding: 4px; 
+            min-height: 85px; height: auto; /* 依內容長高 */
+            border-radius: 10px; padding: 2px; margin-bottom: 4px;
             display: flex; flex-direction: column; align-items: center; 
             border: 1px solid transparent; cursor: pointer; position: relative;
         }
-        .day-cell.active { background: var(--primary-light); border-color: var(--primary); }
         
-        .day-num { font-size: 1rem; font-weight: 600; margin-bottom: 4px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-        .day-cell.today .day-num { background: var(--text-main); color: white; }
+        /* 當日日期: 小反灰 */
+        .day-num { 
+            font-size: 1rem; font-weight: 500; margin-bottom: 3px; 
+            width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 50%; z-index: 2;
+        }
+        .day-cell.today .day-num { background: #E0E0E0; color: #333; } 
         .is-weekend { color: var(--danger); }
 
+        /* 案場標籤: 寬度固定，字體動態 */
         .site-tag {
-            width: 100%; font-size: 10px; padding: 3px 4px; border-radius: 4px; 
-            color: white; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            text-align: center; font-weight: bold;
+            width: 95%; max-width: 100%;
+            font-size: 11px; /* 初始大小 */
+            padding: 3px 2px; border-radius: 4px; 
+            color: white; margin-bottom: 2px; 
+            text-align: center; font-weight: bold; line-height: 1.2;
+            white-space: nowrap; overflow: hidden; /* 防止撐開 */
         }
 
-        /* --- 4. 師傅/薪資頁面元件 --- */
+        /* --- 4. 儀表板 & 列表 --- */
         .dashboard-row { display: flex; gap: 12px; margin-bottom: 16px; }
-        .dash-card { flex: 1; padding: 15px; border-radius: 16px; color: white; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--shadow); cursor: pointer; position: relative; overflow: hidden; }
-        .dash-card.left { background: #64748B; /* 案場請款底色 */ }
-        .dash-card.right { background: #1E293B; /* 總支出底色 */ }
-        .dash-label { font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px; }
-        .dash-val { font-size: 1.4rem; font-weight: 800; }
-
-        .worker-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border); }
-        .w-info b { font-size: 1.1rem; display: block; margin-bottom: 4px; }
-        .w-meta { font-size: 0.85rem; color: var(--text-sub); }
-        .w-price { font-weight: 800; color: var(--text-main); font-size: 1.1rem; }
-
-        /* FAB (浮動按鈕) */
-        .fab-btn {
-            position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px;
-            width: 56px; height: 56px; border-radius: 50%;
-            background: var(--text-main); color: white; border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 24px;
-            display: flex; align-items: center; justify-content: center; z-index: 90;
+        .dash-card { 
+            flex: 1; padding: 16px; border-radius: 18px; color: white; 
+            display: flex; flex-direction: column; justify-content: center; 
+            box-shadow: var(--shadow); cursor: pointer; position: relative; overflow: hidden; 
         }
+        .dash-card.left { background: #546E7A; /* 案場請款較深色 */ }
+        .dash-card.right { background: #263238; /* 總支出深色 */ }
+        .dash-label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px; }
+        .dash-val { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px; }
 
-        /* --- 5. UI 元件 (按鈕/輸入框) --- */
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; color: white; margin-top: 10px; transition: transform 0.1s; background: var(--primary-grad); }
+        .worker-card { display: flex; justify-content: space-between; align-items: center; padding: 18px; margin-bottom: 10px; border: 1px solid #f0f0f0; }
+        
+        /* 按鈕優化 */
+        .btn { 
+            width: 100%; padding: 14px; border: none; border-radius: 14px; 
+            font-weight: 700; font-size: 16px; cursor: pointer; color: white; 
+            margin-top: 10px; background: var(--primary); 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.1s; 
+        }
         .btn:active { transform: scale(0.97); }
         .btn-danger { background: var(--danger); }
-        .btn-ghost { background: transparent; color: var(--text-sub); border: 1px solid #ddd; }
+        .btn-ghost { background: #f5f5f5; color: #555; box-shadow: none; }
         
-        .input-f { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; margin-bottom: 10px; background: #FAFAFA; outline: none; }
+        .input-f { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; margin-bottom: 12px; background: #FAFAFA; outline: none; }
         .input-f:focus { border-color: var(--primary); background: #fff; }
-        .input-locked { background: #eee; color: #999; pointer-events: none; border: 1px dashed #ccc; }
 
-        /* --- 6. 彈窗 (Modal) & 滾輪 --- */
+        /* --- 5. 滾輪選擇器 (iOS Focus Effect) --- */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 2000; display: none; opacity: 0;
             transition: opacity 0.2s; align-items: center; justify-content: center;
         }
-        .modal-box {
-            background: #fff; width: 90%; max-width: 400px; max-height: 85vh;
-            border-radius: 20px; padding: 20px; overflow-y: auto; position: relative;
-            transform: scale(0.95); transition: transform 0.2s;
-        }
-        .modal-close { position: absolute; top: 15px; right: 15px; font-size: 20px; color: #999; cursor: pointer; }
-        .modal-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; padding-right: 20px; }
-
-        /* iOS 滾輪樣式 */
         .picker-container {
             position: fixed; bottom: 0; width: 100%; background: #fff; z-index: 2100;
-            border-radius: 20px 20px 0 0; padding: 20px 0;
-            transform: translateY(100%); transition: transform 0.3s;
+            border-radius: 24px 24px 0 0; padding: 20px 0;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
         }
-        .picker-actions { display: flex; justify-content: space-between; padding: 0 20px 10px; font-weight: bold; font-size: 1rem; }
-        .picker-body { height: 200px; display: flex; position: relative; overflow: hidden; mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); }
-        .picker-col { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; text-align: center; padding: 80px 0; }
+        .picker-actions { display: flex; justify-content: space-between; padding: 0 24px 15px; font-weight: 600; font-size: 1rem; }
+        
+        .picker-body { 
+            height: 220px; display: flex; position: relative; overflow: hidden; 
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); 
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); 
+        }
+        .picker-col { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; text-align: center; padding: 90px 0; }
         .picker-col::-webkit-scrollbar { display: none; }
-        .picker-item { height: 40px; line-height: 40px; scroll-snap-align: center; font-size: 1.1rem; color: #aaa; transition: all 0.2s; }
-        .picker-item.selected { color: #333; font-size: 1.3rem; font-weight: 800; transform: scale(1.1); }
-        .picker-line { position: absolute; top: 50%; left: 0; width: 100%; height: 40px; margin-top: -20px; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; pointer-events: none; }
+        
+        .picker-item { 
+            height: 40px; line-height: 40px; scroll-snap-align: center; 
+            font-size: 1.1rem; color: #aaa; transition: all 0.2s ease; 
+        }
+        /* 灰框範圍內的特效 */
+        .picker-item.active { 
+            color: #333; font-size: 1.5rem; font-weight: 800; transform: scale(1.1); 
+        }
+        .picker-highlight { 
+            position: absolute; top: 50%; left: 0; width: 100%; height: 40px; margin-top: -20px; 
+            background: rgba(0,0,0,0.04); border-top: 1px solid #eee; border-bottom: 1px solid #eee; pointer-events: none; 
+        }
+
+        /* --- 6. Quick Add Modal (本月紀錄) --- */
+        .modal-box {
+            background: #fff; width: 88%; max-width: 380px; max-height: 85vh;
+            border-radius: 24px; padding: 24px; overflow-y: auto; position: relative;
+            transform: scale(0.95); transition: transform 0.2s;
+        }
+        .modal-close { position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; display:flex; align-items:center; justify-content:center; background:#f0f0f0; border-radius:50%; color:#555; cursor:pointer; font-weight:bold;}
+        
+        .quick-site-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fff; border: 1px solid #eee; border-radius: 12px;
+            padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            cursor: pointer; transition: background 0.1s;
+        }
+        .quick-site-row:active { background: #f9f9f9; }
 
         /* --- 7. 設定 & 主題球 --- */
-        .theme-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; }
-        .theme-dot { width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s; }
-        .theme-dot.active { transform: scale(1.15); border-color: #333; }
+        .theme-grid { display: flex; justify-content: center; gap: 12px; margin: 15px 0; flex-wrap: wrap; }
+        .theme-dot { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .theme-dot.active { transform: scale(1.2); border-color: #555; }
 
         /* 底部導航 */
         .bottom-nav {
-            position: fixed; bottom: 0; width: 100%; height: calc(65px + var(--safe-bottom));
-            background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around;
+            position: fixed; bottom: 0; width: 100%; height: calc(70px + var(--safe-bottom));
+            background: #fff; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-around;
             padding-bottom: var(--safe-bottom); z-index: 100;
         }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; font-size: 10px; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; font-size: 10px; transition: color 0.2s; }
         .nav-item.active { color: var(--primary); font-weight: bold; }
-        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
+        .nav-item svg { width: 26px; height: 26px; margin-bottom: 4px; fill: currentColor; }
 
         /* Checkbox list style */
-        .chk-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
-        .chk-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+        .chk-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px dashed #eee; }
+        .chk-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--primary); }
+
+        /* 浮動按鈕 */
+        .fab-btn {
+            position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: #263238; color: white; border: none;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25); font-size: 24px;
+            display: flex; align-items: center; justify-content: center; z-index: 90;
+        }
 
     </style>
 </head>
@@ -167,7 +202,7 @@
 
     <main>
         <section id="tab-cal" class="page active">
-            <div class="card cal-container">
+            <div class="card cal-wrapper" id="calWrapper">
                 <div class="grid-7">
                     <div class="week-header is-weekend">日</div><div class="week-header">一</div><div class="week-header">二</div><div class="week-header">三</div><div class="week-header">四</div><div class="week-header">五</div><div class="week-header is-weekend">六</div>
                 </div>
@@ -180,6 +215,7 @@
                 <div class="dash-card left" onclick="openPaymentModal()">
                     <div class="dash-label">案場請款</div>
                     <div class="dash-val">查看</div>
+                    <div style="font-size:30px; opacity:0.2; position:absolute; right:10px; bottom:10px;">📋</div>
                 </div>
                 <div class="dash-card right">
                     <div class="dash-label">本月總支出</div>
@@ -188,12 +224,12 @@
             </div>
 
             <div class="card">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span>🔍</span>
-                    <input type="text" id="wSearch" class="input-f" style="margin:0" placeholder="搜尋姓名..." oninput="renderWorkerList()">
-                    <input type="date" id="dSearch" class="input-f" style="margin:0; width:140px;" onchange="renderWorkerList()">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.2rem">🔍</span>
+                    <input type="text" id="wSearch" class="input-f" style="margin:0; border:none; background:transparent;" placeholder="搜尋師傅..." oninput="renderWorkerList()">
                 </div>
-                <button class="btn" onclick="openWorkerModal()">+ 新增師傅</button>
+                <div style="height:1px; background:#eee; margin:10px 0;"></div>
+                <button class="btn" style="margin-top:0" onclick="openWorkerModal()">+ 新增師傅</button>
             </div>
 
             <div id="workerList"></div>
@@ -202,24 +238,23 @@
 
         <section id="tab-set" class="page">
             <div class="card">
-                <h3>🎨 主題顏色</h3>
+                <h3>🎨 選擇主題顏色</h3>
                 <div class="theme-grid" id="themeBox"></div>
-                <div style="text-align:center; font-size:0.8rem; color:#999; margin-top:10px;">UI 日曆與按鈕顏色將隨主題變更</div>
             </div>
 
             <div class="card">
-                <h3>☁️ 雲端同步 (GAS)</h3>
+                <h3>☁️ 雲端資料庫</h3>
                 <div class="chk-row">
-                    <span>🔒 鎖定網址 (防止誤觸)</span>
+                    <span>🔒 鎖定網址</span>
                     <input type="checkbox" id="gasLock" onchange="toggleGasLock()">
                 </div>
-                <input id="gasUrl" class="input-f" placeholder="請貼上 Google Apps Script 網址">
-                <div id="syncStatus" style="font-size:0.8rem; color:#888; text-align:right;">未連線</div>
+                <input id="gasUrl" class="input-f" placeholder="Google Apps Script URL">
+                <div id="syncStatus" style="font-size:0.8rem; color:#888; text-align:right;"></div>
             </div>
 
             <div class="card">
-                <h3>⚠️ 危險區域</h3>
-                <button class="btn btn-danger" onclick="masterReset()">一鍵重設所有資料</button>
+                <h3>⚠️ 危險操作</h3>
+                <button class="btn btn-danger" onclick="masterReset()">⚠️ 重置所有資料</button>
             </div>
         </section>
     </main>
@@ -231,7 +266,7 @@
         </div>
         <div class="nav-item" id="nav-work" onclick="switchPage('work')">
             <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            師傅/薪資
+            人員
         </div>
         <div class="nav-item" id="nav-set" onclick="switchPage('set')">
             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
@@ -239,45 +274,62 @@
         </div>
     </nav>
 
-    <div id="modalDatePicker" class="picker-container">
-        <div class="picker-actions">
-            <span style="color:#999; cursor:pointer;" onclick="closePicker()">取消</span>
-            <span style="color:var(--primary); cursor:pointer;" onclick="confirmDate()">確定</span>
-        </div>
-        <div class="picker-body">
-            <div class="picker-line"></div>
-            <div id="wheelY" class="picker-col"></div>
-            <div id="wheelM" class="picker-col"></div>
+    <div id="pickerOverlay" class="overlay" onclick="closePicker()">
+        <div id="modalDatePicker" class="picker-container" onclick="event.stopPropagation()">
+            <div class="picker-actions">
+                <span style="color:#999; cursor:pointer;" onclick="closePicker()">取消</span>
+                <span style="color:#999; font-weight:400">選擇月份</span>
+                <span style="color:var(--primary); cursor:pointer;" onclick="confirmDate()">確定</span>
+            </div>
+            <div class="picker-body">
+                <div class="picker-highlight"></div>
+                <div id="wheelY" class="picker-col"></div>
+                <div id="wheelM" class="picker-col"></div>
+            </div>
         </div>
     </div>
-    <div id="pickerOverlay" class="overlay" style="z-index:2099" onclick="closePicker()"></div>
+
+    <div id="modalQuickAdd" class="overlay">
+        <div class="modal-box">
+            <div class="modal-close" onclick="closeModal('modalQuickAdd')">✕</div>
+            <h3 id="quickDateTitle" style="margin-top:0; margin-bottom:15px;"></h3>
+            
+            <button class="btn" style="background: linear-gradient(135deg, #a8a8a8, #888); margin-bottom:15px;" onclick="openSiteModal(null)">+ 新增案場</button>
+            
+            <div style="font-size:0.85rem; color:#999; margin-bottom:8px;">或複製本月曾經新增過的案場：</div>
+            <div id="quickSiteList" style="max-height:200px; overflow-y:auto;"></div>
+
+            <hr style="border-top:1px dashed #eee; margin:15px 0;">
+            <div style="font-size:0.85rem; color:#333; font-weight:bold; margin-bottom:8px;">當日已安排：</div>
+            <div id="dayExistList"></div>
+        </div>
+    </div>
 
     <div id="modalSite" class="overlay">
         <div class="modal-box">
-            <div class="modal-close" onclick="closeModal()">✕</div>
-            <div class="modal-title">新增/編輯案場</div>
+            <div class="modal-close" onclick="closeModal('modalSite')">✕</div>
+            <h3>案場設定</h3>
             <input id="sId" type="hidden">
             <input id="sDate" type="hidden">
             <input id="sName" class="input-f" placeholder="案場名稱">
             
-            <label style="font-size:0.9rem; color:#888;">選擇底色</label>
             <div id="sColorBox" class="theme-grid" style="margin-bottom:15px"></div>
 
             <div style="display:flex; justify-content:space-between; margin-bottom:10px">
-                <b>選擇上工師傅</b>
-                <input id="sWorkerFilter" style="padding:4px; font-size:12px; width:100px" placeholder="搜尋..." oninput="renderSiteWorkerSelect()">
+                <b>上工師傅</b>
+                <input id="sWorkerFilter" style="padding:4px; font-size:12px; width:100px; border:1px solid #ddd; border-radius:6px;" placeholder="搜尋..." oninput="renderSiteWorkerSelect()">
             </div>
-            <div id="sWorkerList" style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:10px; margin-bottom:15px;"></div>
+            <div id="sWorkerList" style="max-height:180px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:10px; margin-bottom:15px;"></div>
 
-            <button class="btn" onclick="saveSite()">儲存案場</button>
-            <button id="btnDelSite" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delSite()">刪除案場</button>
+            <button class="btn" onclick="saveSite()">儲存</button>
+            <button id="btnDelSite" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delSite()">刪除</button>
         </div>
     </div>
 
     <div id="modalWorker" class="overlay">
         <div class="modal-box">
-            <div class="modal-close" onclick="closeModal()">✕</div>
-            <div class="modal-title">師傅資料</div>
+            <div class="modal-close" onclick="closeModal('modalWorker')">✕</div>
+            <h3>師傅資料</h3>
             <input id="wId" type="hidden">
             
             <div class="chk-row">
@@ -285,16 +337,16 @@
                 <input type="checkbox" id="wTop">
             </div>
             <input id="wName" class="input-f" placeholder="姓名">
-            <input id="wRate" type="number" class="input-f" placeholder="標準日薪 (不影響舊紀錄)">
+            <input id="wRate" type="number" class="input-f" placeholder="標準日薪">
             <input id="wPhone" class="input-f" placeholder="聯絡電話">
             <textarea id="wNote" class="input-f" placeholder="備註..." style="height:60px"></textarea>
             
-            <div id="wStatsBlock" style="display:none; background:#f5f5f5; padding:10px; border-radius:10px; margin-bottom:15px;">
-                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:5px;">本月薪資試算</div>
-                <div style="font-size:0.8rem; color:#666; line-height:1.6">
-                    上工天數：<span id="wWorkDays">0</span> 天<br>
-                    工資小計：$<span id="wWorkPay">0</span> (依實際上工日薪)<br>
-                    雜費總額：$<span id="wExtraTotal">0</span>
+            <div id="wStatsBlock" style="display:none; background:#f9f9f9; padding:12px; border-radius:12px; margin-bottom:15px;">
+                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:5px;">本月薪資</div>
+                <div style="font-size:0.85rem; color:#666; line-height:1.6">
+                    工天：<span id="wWorkDays">0</span> 天<br>
+                    工資：$<span id="wWorkPay">0</span><br>
+                    雜費：$<span id="wExtraTotal">0</span>
                 </div>
                 <div style="border-top:1px solid #ddd; margin-top:5px; padding-top:5px; font-weight:800; font-size:1.1rem; text-align:right;">
                     總計：$<span id="wFinalPay">0</span>
@@ -315,17 +367,17 @@
                 <div id="wExtraList" style="max-height:120px; overflow-y:auto; border:1px solid #eee; padding:5px;"></div>
             </div>
 
-            <button class="btn" onclick="saveWorker()">儲存資料</button>
-            <button id="btnDelWorker" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delWorker()">刪除師傅</button>
+            <button class="btn" onclick="saveWorker()">儲存</button>
+            <button id="btnDelWorker" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delWorker()">刪除</button>
         </div>
     </div>
 
     <div id="modalMultiExtra" class="overlay">
         <div class="modal-box">
-            <div class="modal-close" onclick="closeModal()">✕</div>
-            <div class="modal-title">多人添加雜費</div>
+            <div class="modal-close" onclick="closeModal('modalMultiExtra')">✕</div>
+            <h3>多人添加雜費</h3>
             <input id="meDate" type="date" class="input-f">
-            <input id="meName" class="input-f" placeholder="項目 (如: 便當)">
+            <input id="meName" class="input-f" placeholder="項目">
             <input id="meAmt" type="number" class="input-f" placeholder="金額">
             
             <div style="margin:10px 0;">
@@ -333,39 +385,31 @@
             </div>
             <div id="meList" style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:10px;"></div>
             
-            <button class="btn" onclick="saveMultiExtra()">完成添加</button>
+            <button class="btn" onclick="saveMultiExtra()">完成</button>
         </div>
     </div>
 
     <div id="modalPayment" class="overlay">
         <div class="modal-box">
-            <div class="modal-close" onclick="closeModal()">✕</div>
-            <div class="modal-title">案場請款管理</div>
+            <div class="modal-close" onclick="closeModal('modalPayment')">✕</div>
+            <h3>案場請款管理</h3>
+            <div style="font-size:0.8rem; color:#999; margin-bottom:10px;">* 同名稱案場自動合併</div>
             <div id="payList" style="max-height:300px; overflow-y:auto;"></div>
-            <button class="btn" onclick="closeModal()">關閉</button>
-        </div>
-    </div>
-
-    <div id="modalDayDetail" class="overlay">
-        <div class="modal-box">
-            <div class="modal-close" onclick="closeModal()">✕</div>
-            <div class="modal-title" id="dayDetailTitle"></div>
-            <div id="daySiteList"></div>
-            <button class="btn" onclick="openSiteModal(null)">+ 新增案場</button>
+            <button class="btn" onclick="closeModal('modalPayment')">關閉</button>
         </div>
     </div>
 
 <script>
 /* --- 系統核心邏輯 --- */
-// 7種主題色 (綠, 黃, 藍綠, 粉, 紫, 紅, 深藍)
+// 7種 RGB 主題色 (對應圖片)
 const THEMES = [
-    { c: '#5B9A8B', bg:'#E0F2F1' }, // 抹茶
-    { c: '#F4C430', bg:'#FFF8E1' }, // 番紅花黃
-    { c: '#4DB6AC', bg:'#E0F2F1' }, // 藍綠
-    { c: '#F48FB1', bg:'#FCE4EC' }, // 粉紅
-    { c: '#7986CB', bg:'#E8EAF6' }, // 靛青
-    { c: '#E57373', bg:'#FFEBEE' }, // 紅
-    { c: '#3F51B5', bg:'#E8EAF6' }  // 深藍
+    { rgb: '91, 154, 139', hex: '#5B9A8B' }, // 抹茶綠
+    { rgb: '244, 196, 48', hex: '#F4C430' }, // 黃
+    { rgb: '77, 182, 172', hex: '#4DB6AC' }, // 藍綠
+    { rgb: '244, 143, 177', hex: '#F48FB1' }, // 粉紅
+    { rgb: '121, 134, 203', hex: '#7986CB' }, // 紫
+    { rgb: '229, 115, 115', hex: '#E57373' }, // 紅
+    { rgb: '63, 81, 181',  hex: '#3F51B5' }  // 深藍
 ];
 
 let db = {
@@ -376,38 +420,35 @@ let db = {
 let curDate = new Date();
 let selectedDateStr = "";
 
-// 初始化
 window.onload = async () => {
-    // 1. 載入資料
-    const local = localStorage.getItem('ENG_LEDGER_ULTIMATE');
+    const local = localStorage.getItem('ENG_LEDGER_REBORN');
     if(local) db = JSON.parse(local);
     
-    // 2. 初始化UI
     applyTheme(db.settings.theme);
     renderPickerWheels();
     updateHeaderDate();
     renderAll();
     
-    // 3. 雲端同步
+    // 手勢監聽
+    initGestures();
+
     if(db.settings.gasUrl) {
         document.getElementById('gasUrl').value = db.settings.gasUrl;
         document.getElementById('gasLock').checked = db.settings.gasLock;
         toggleGasLock();
-        await syncCloud(true); // 首次拉取
+        await syncCloud(true);
     }
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_ULTIMATE', JSON.stringify(db));
-    syncCloud(false); // 推送
+    localStorage.setItem('ENG_LEDGER_REBORN', JSON.stringify(db));
+    syncCloud(false);
 }
 
-// 雲端同步邏輯
 async function syncCloud(isPull) {
     const url = db.settings.gasUrl;
     const status = document.getElementById('syncStatus');
     if(!url) return;
-    
     status.innerText = "同步中...";
     try {
         if(isPull) {
@@ -418,9 +459,7 @@ async function syncCloud(isPull) {
             await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
         }
         status.innerText = "已同步 " + new Date().toLocaleTimeString();
-    } catch(e) {
-        status.innerText = "同步失敗";
-    }
+    } catch(e) { status.innerText = "同步失敗"; }
 }
 
 function renderAll() {
@@ -428,6 +467,26 @@ function renderAll() {
     renderWorkerList();
     renderThemeGrid();
     renderSiteColorBox();
+}
+
+/* --- 手勢 (Swipe) --- */
+function initGestures() {
+    const cal = document.getElementById('calWrapper');
+    let startX = 0;
+    
+    cal.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
+    cal.addEventListener('touchend', e => {
+        let diff = e.changedTouches[0].clientX - startX;
+        if(Math.abs(diff) > 50) { // 門檻
+            if(diff > 0) changeMonth(-1); // 右滑 -> 上個月
+            else changeMonth(1); // 左滑 -> 下個月
+        }
+    });
+}
+function changeMonth(dir) {
+    curDate.setMonth(curDate.getMonth() + dir);
+    updateHeaderDate();
+    renderAll();
 }
 
 /* --- 日曆邏輯 --- */
@@ -445,13 +504,8 @@ function renderCalendar() {
     const firstDay = new Date(y, m, 1).getDay();
     const daysInM = new Date(y, m+1, 0).getDate();
     
-    // 填補空白
-    for(let i=0; i<firstDay; i++) {
-        const d = document.createElement('div');
-        grid.appendChild(d);
-    }
+    for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
     
-    // 填入日期
     for(let d=1; d<=daysInM; d++) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
@@ -459,57 +513,117 @@ function renderCalendar() {
         const dayOfWeek = new Date(y, m, d).getDay();
         const isToday = new Date().toDateString() === new Date(y, m, d).toDateString();
         
-        // 週末紅字
         let numHtml = `<div class="day-num ${isToday?'today':''} ${dayOfWeek===0||dayOfWeek===6 ? 'is-weekend':''}">${d}</div>`;
         
-        // 案場標籤
         const daySites = db.sites.filter(s => s.date === dateStr);
         let tagsHtml = '';
         daySites.forEach(s => {
-            const c = THEMES[s.colorIdx || 0].c;
+            const c = THEMES[s.colorIdx || 0].hex;
             tagsHtml += `<div class="site-tag" style="background:${c}">${s.name}</div>`;
         });
         
         cell.innerHTML = numHtml + tagsHtml;
-        cell.onclick = () => openDayDetail(dateStr);
+        cell.onclick = () => openQuickAdd(dateStr);
         grid.appendChild(cell);
     }
+    
+    // 延遲執行字體調整
+    setTimeout(resizeTags, 10);
 }
 
-/* --- iOS 滾輪選擇器 --- */
+// 動態調整字體大小，確保不換行但塞得下
+function resizeTags() {
+    document.querySelectorAll('.site-tag').forEach(el => {
+        let size = 11;
+        el.style.fontSize = size + 'px';
+        while (el.scrollWidth > el.clientWidth && size > 8) {
+            size--;
+            el.style.fontSize = size + 'px';
+        }
+    });
+}
+
+/* --- Quick Add Logic (本月快取) --- */
+function openQuickAdd(dateStr) {
+    selectedDateStr = dateStr;
+    document.getElementById('quickDateTitle').innerText = dateStr;
+    
+    // 找出本日已存在的案場
+    const daySites = db.sites.filter(s => s.date === dateStr);
+    const dayList = document.getElementById('dayExistList');
+    dayList.innerHTML = "";
+    daySites.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'quick-site-row';
+        row.style.background = '#fff5f5'; // 區分
+        row.innerHTML = `<span style="font-weight:bold">${s.name} (${s.workers.length}人)</span> <span style="color:#e53935;font-weight:bold" onclick="event.stopPropagation();delSite('${s.id}')">刪除</span>`;
+        row.onclick = () => openSiteModal(s.id);
+        dayList.appendChild(row);
+    });
+
+    // 找出本月曾經新增過的 (Unique)
+    const ym = dateStr.slice(0, 7);
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
+    const uniqueMap = new Map();
+    monthSites.forEach(s => uniqueMap.set(s.name, s)); // Keep last one for config clone
+    
+    const quickList = document.getElementById('quickSiteList');
+    quickList.innerHTML = "";
+    
+    uniqueMap.forEach((s, name) => {
+        const row = document.createElement('div');
+        row.className = 'quick-site-row';
+        const c = THEMES[s.colorIdx || 0].hex;
+        row.innerHTML = `<span style="display:flex;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></div>${name}</span> <span>+</span>`;
+        // 點擊複製
+        row.onclick = () => cloneSite(s, dateStr);
+        quickList.appendChild(row);
+    });
+
+    if(uniqueMap.size === 0) quickList.innerHTML = "<div style='text-align:center;color:#ccc;padding:10px'>本月尚無其他案場</div>";
+
+    openModal('modalQuickAdd');
+}
+
+function cloneSite(templateSite, targetDate) {
+    const newSite = {
+        id: 's' + Date.now(),
+        date: targetDate,
+        name: templateSite.name,
+        colorIdx: templateSite.colorIdx,
+        workers: templateSite.workers.map(w => ({...w})) // Clone workers
+    };
+    db.sites.push(newSite);
+    saveDB();
+    closeModal('modalQuickAdd');
+    renderAll();
+}
+
+/* --- iOS 滾輪 --- */
 function renderPickerWheels() {
     const wy = document.getElementById('wheelY');
     const wm = document.getElementById('wheelM');
     
-    // 年份 2000-2080
-    for(let i=2000; i<=2080; i++) {
+    for(let i=2020; i<=2035; i++) {
         const div = document.createElement('div');
-        div.className = 'picker-item';
-        div.innerText = i + '年';
-        div.dataset.val = i;
+        div.className = 'picker-item'; div.innerText = i + '年'; div.dataset.val = i;
         wy.appendChild(div);
     }
-    
-    // 月份 1-12
     for(let i=1; i<=12; i++) {
         const div = document.createElement('div');
-        div.className = 'picker-item';
-        div.innerText = i + '月';
-        div.dataset.val = i;
+        div.className = 'picker-item'; div.innerText = i + '月'; div.dataset.val = i;
         wm.appendChild(div);
     }
+    [wy, wm].forEach(el => el.addEventListener('scroll', updatePickerFocus));
+}
 
-    // 滾動監聽 (Highlight)
-    [wy, wm].forEach(el => {
-        el.addEventListener('scroll', () => {
-            const center = el.scrollTop + 100;
-            const items = el.querySelectorAll('.picker-item');
-            items.forEach(it => {
-                const top = it.offsetTop;
-                if(top > center - 20 && top < center + 20) it.classList.add('selected');
-                else it.classList.remove('selected');
-            });
-        });
+function updatePickerFocus(e) {
+    const el = e.target;
+    const center = el.scrollTop + 110; // offset
+    el.querySelectorAll('.picker-item').forEach(it => {
+        const top = it.offsetTop;
+        if(top > center - 25 && top < center + 25) it.classList.add('active');
+        else it.classList.remove('active');
     });
 }
 
@@ -517,19 +631,17 @@ function openDatePicker() {
     const el = document.getElementById('modalDatePicker');
     const overlay = document.getElementById('pickerOverlay');
     el.style.transform = 'translateY(0)';
-    overlay.style.display = 'block';
+    overlay.style.display = 'flex';
     setTimeout(()=>overlay.style.opacity=1, 10);
     
-    // 自動滾動到當前
+    // Scroll to current
     setTimeout(() => {
         const wy = document.getElementById('wheelY');
         const wm = document.getElementById('wheelM');
-        
         const yItem = [...wy.children].find(c => c.dataset.val == curDate.getFullYear());
         const mItem = [...wm.children].find(c => c.dataset.val == curDate.getMonth()+1);
-        
-        if(yItem) wy.scrollTop = yItem.offsetTop - 80;
-        if(mItem) wm.scrollTop = mItem.offsetTop - 80;
+        if(yItem) wy.scrollTop = yItem.offsetTop - 90;
+        if(mItem) wm.scrollTop = mItem.offsetTop - 90;
     }, 100);
 }
 
@@ -542,8 +654,8 @@ function closePicker() {
 }
 
 function confirmDate() {
-    const yEl = document.querySelector('#wheelY .selected');
-    const mEl = document.querySelector('#wheelM .selected');
+    const yEl = document.querySelector('#wheelY .active');
+    const mEl = document.querySelector('#wheelM .active');
     if(yEl && mEl) {
         curDate.setFullYear(parseInt(yEl.dataset.val));
         curDate.setMonth(parseInt(mEl.dataset.val)-1);
@@ -553,32 +665,59 @@ function confirmDate() {
     closePicker();
 }
 
-/* --- 案場管理 (包含薪資快照邏輯) --- */
-function openDayDetail(dateStr) {
-    selectedDateStr = dateStr;
-    document.getElementById('dayDetailTitle').innerText = dateStr;
-    const list = document.getElementById('daySiteList');
+/* --- 案場請款 (合併邏輯) --- */
+function openPaymentModal() {
+    const list = document.getElementById('payList');
     list.innerHTML = "";
     
-    const sites = db.sites.filter(s => s.date === dateStr);
-    sites.forEach(s => {
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
+    
+    // Group by Name
+    const uniqueNames = [...new Set(monthSites.map(s => s.name))];
+    
+    uniqueNames.forEach(name => {
+        // 檢查該名稱本月是否全部已付
+        const sitesWithName = monthSites.filter(s => s.name === name);
+        const allPaid = sitesWithName.every(s => db.payments.some(p => p.siteId === s.id));
+        
         const div = document.createElement('div');
         div.className = 'card';
-        div.style.marginBottom = '10px';
-        div.style.padding = '10px';
-        div.style.display = 'flex'; 
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
-        div.innerHTML = `<div><b>${s.name}</b> <span style="font-size:0.8rem">${s.workers.length}人</span></div>`;
-        div.onclick = () => openSiteModal(s.id);
+        div.style.padding = '12px';
+        div.style.marginBottom = '8px';
+        div.style.display = 'flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
+        div.style.borderLeft = allPaid ? '5px solid #ccc' : '5px solid ' + THEMES[db.settings.theme].hex;
+        
+        div.innerHTML = `<b>${name}</b> <input type="checkbox" ${allPaid?'checked':''} onchange="toggleGroupPay('${name}', this.checked)">`;
         list.appendChild(div);
     });
     
-    openModal('modalDayDetail');
+    if(uniqueNames.length === 0) list.innerHTML = "<div style='text-align:center;color:#ccc'>本月無案場</div>";
+    openModal('modalPayment');
 }
 
+function toggleGroupPay(name, isChecked) {
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const targetSites = db.sites.filter(s => s.date.startsWith(ym) && s.name === name);
+    
+    targetSites.forEach(s => {
+        if(isChecked) {
+            // Add if not exist
+            if(!db.payments.some(p => p.siteId === s.id)) {
+                db.payments.push({ siteId: s.id, date: new Date().toISOString() });
+            }
+        } else {
+            // Remove
+            db.payments = db.payments.filter(p => p.siteId !== s.id);
+        }
+    });
+    saveDB();
+    openPaymentModal(); // Redraw
+}
+
+/* --- 案場編輯 --- */
 function openSiteModal(siteId) {
-    closeModal('modalDayDetail'); // 關閉上一層
+    closeModal('modalQuickAdd'); // Close prev
     openModal('modalSite');
     
     const s = siteId ? db.sites.find(x => x.id === siteId) : { id: '', name: '', colorIdx: 0, workers: [] };
@@ -588,33 +727,21 @@ function openSiteModal(siteId) {
     document.getElementById('sName').value = s.name;
     document.getElementById('btnDelSite').style.display = siteId ? 'block' : 'none';
     
-    // 渲染顏色選擇
-    const colorBox = document.getElementById('sColorBox');
-    [...colorBox.children].forEach((dot, idx) => {
-        dot.classList.toggle('active', idx === (s.colorIdx || 0));
-        dot.onclick = () => {
-            s.colorIdx = idx;
-            [...colorBox.children].forEach(d => d.classList.remove('active'));
-            dot.classList.add('active');
-        };
-    });
-
-    renderSiteWorkerSelect(s.workers); // 傳入已選師傅資料 (包含當時薪資)
+    renderSiteColorBox(s.colorIdx);
+    renderSiteWorkerSelect(s.workers);
 }
 
 function renderSiteWorkerSelect(currentWorkers = []) {
     const filter = document.getElementById('sWorkerFilter').value.toLowerCase();
     const list = document.getElementById('sWorkerList');
     list.innerHTML = "";
-    
     const currentIds = currentWorkers.map(w => w.id);
     
     db.workers.forEach(w => {
         if(w.name.toLowerCase().includes(filter)) {
-            const isChecked = currentIds.includes(w.id);
             const row = document.createElement('div');
             row.className = 'chk-row';
-            row.innerHTML = `<span>${w.name}</span> <input type="checkbox" value="${w.id}" ${isChecked?'checked':''}>`;
+            row.innerHTML = `<span>${w.name}</span> <input type="checkbox" value="${w.id}" ${currentIds.includes(w.id)?'checked':''}>`;
             list.appendChild(row);
         }
     });
@@ -624,110 +751,77 @@ function saveSite() {
     const id = document.getElementById('sId').value;
     const date = document.getElementById('sDate').value;
     const name = document.getElementById('sName').value;
-    const colorIdx = document.querySelector('#sColorBox .active') ? [...document.getElementById('sColorBox').children].indexOf(document.querySelector('#sColorBox .active')) : 0;
     
     if(!name) return alert("請輸入名稱");
     
-    // --- 核心邏輯：薪資快照 ---
-    // 找出所有被勾選的 workerID
-    const checkedBoxes = document.querySelectorAll('#sWorkerList input:checked');
-    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
-    
-    // 舊的案場資料 (如果是編輯)
-    const oldSite = id ? db.sites.find(s => s.id === id) : null;
-    const oldWorkers = oldSite ? oldSite.workers : [];
+    // Color
+    const activeDot = document.querySelector('#sColorBox .active');
+    const colorIdx = activeDot ? parseInt(activeDot.dataset.idx) : 0;
 
-    // 建立新的 workers 陣列
-    const newWorkers = selectedIds.map(wid => {
-        // 1. 檢查這個人原本是否就在案場裡 (保留舊薪資)
-        const existing = oldWorkers.find(ow => ow.id === wid);
-        if(existing) return existing;
-        
-        // 2. 如果是新加入的，抓取當前「標準日薪」存入 snapshot
-        const masterWorker = db.workers.find(mw => mw.id === wid);
-        return {
-            id: wid,
-            snapshotRate: masterWorker ? (Number(masterWorker.rate) || 0) : 0
-        };
-    });
+    // Workers & Snapshot
+    const chks = document.querySelectorAll('#sWorkerList input:checked');
+    const selectedIds = Array.from(chks).map(c => c.value);
     
-    const siteData = {
-        id: id || 's'+Date.now(),
-        date: date,
-        name: name,
-        colorIdx: colorIdx,
-        workers: newWorkers
-    };
+    const oldSite = id ? db.sites.find(s => s.id === id) : null;
+    const newWorkers = selectedIds.map(wid => {
+        const exist = oldSite?.workers.find(w => w.id === wid);
+        if(exist) return exist;
+        const master = db.workers.find(w => w.id === wid);
+        return { id: wid, snapshotRate: master ? (Number(master.rate)||0) : 0 };
+    });
+
+    const data = { id: id || 's'+Date.now(), date, name, colorIdx, workers: newWorkers };
     
     if(id) {
         const idx = db.sites.findIndex(x => x.id === id);
-        db.sites[idx] = siteData;
-    } else {
-        db.sites.push(siteData);
-    }
+        db.sites[idx] = data;
+    } else db.sites.push(data);
     
     saveDB();
     closeModal('modalSite');
     renderAll();
 }
 
-function delSite() {
-    if(confirm('確定刪除案場？')) {
-        const id = document.getElementById('sId').value;
+function delSite(id) {
+    if(!id) id = document.getElementById('sId').value; // from modal
+    if(confirm('確定刪除？')) {
         db.sites = db.sites.filter(x => x.id !== id);
         saveDB();
-        closeModal('modalSite');
+        closeModal(null);
         renderAll();
     }
 }
 
-/* --- 師傅管理 --- */
+/* --- 師傅與其他邏輯 --- */
 function renderWorkerList() {
     const wSearch = document.getElementById('wSearch').value.toLowerCase();
-    const dSearch = document.getElementById('dSearch').value;
     const list = document.getElementById('workerList');
     list.innerHTML = "";
     
     let totalExp = 0;
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    
-    // 排序：置頂優先
     const sorted = [...db.workers].sort((a,b) => (b.isTop?1:0) - (a.isTop?1:0));
     
     sorted.forEach(w => {
-        // 篩選
         if(wSearch && !w.name.toLowerCase().includes(wSearch)) return;
-        if(dSearch) {
-            // 日期搜尋：檢查該日是否有案場包含此人
-            const hasWork = db.sites.some(s => s.date === dSearch && s.workers.some(sw => sw.id === w.id));
-            if(!hasWork) return;
-        }
 
-        // 計算月薪 (根據 Snapshot)
-        // 1. 找出本月此人參與的所有案場
+        // Calc
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let salary = 0;
-        monthSites.forEach(s => {
-            const record = s.workers.find(sw => sw.id === w.id);
-            salary += record ? Number(record.snapshotRate) : 0;
-        });
+        monthSites.forEach(s => salary += Number(s.workers.find(sw => sw.id === w.id).snapshotRate));
         
-        // 2. 雜費
         const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
         const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
         
         const total = salary + extraSum;
         totalExp += total;
         
-        // 渲染卡片
         const card = document.createElement('div');
-        card.className = 'card worker-card';
+        card.className = 'worker-card card';
+        card.style.padding = '15px';
         card.innerHTML = `
-            <div class="w-info">
-                <b>${w.isTop?'⭐ ':''}${w.name}</b>
-                <span class="w-meta">${monthSites.length} 天上工</span>
-            </div>
-            <div class="w-price">$${total.toLocaleString()}</div>
+            <div><b>${w.isTop?'⭐ ':''}${w.name}</b><div style="font-size:0.85rem;color:#888;margin-top:4px">${monthSites.length} 天上工</div></div>
+            <div style="font-size:1.2rem;font-weight:800">$${total.toLocaleString()}</div>
         `;
         card.onclick = () => openWorkerModal(w.id);
         list.appendChild(card);
@@ -738,7 +832,6 @@ function renderWorkerList() {
 
 function openWorkerModal(id) {
     const w = id ? db.workers.find(x => x.id === id) : { id:'', name:'', rate:'', isTop:false, phone:'', note:'' };
-    
     document.getElementById('wId').value = w.id;
     document.getElementById('wTop').checked = w.isTop;
     document.getElementById('wName').value = w.name;
@@ -747,23 +840,13 @@ function openWorkerModal(id) {
     document.getElementById('wNote').value = w.note;
     document.getElementById('btnDelWorker').style.display = id ? 'block' : 'none';
     
-    // 統計 & 雜費 (只有編輯模式顯示)
-    const statBlock = document.getElementById('wStatsBlock');
-    const extraBlock = document.getElementById('wExtraBlock');
-    
     if(id) {
-        statBlock.style.display = 'block';
-        extraBlock.style.display = 'block';
-        
-        // 計算統計
+        document.getElementById('wStatsBlock').style.display = 'block';
+        document.getElementById('wExtraBlock').style.display = 'block';
+        // Calc Stats for Modal
         const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
-        let workPay = 0;
-        monthSites.forEach(s => {
-            const rec = s.workers.find(sw => sw.id === w.id);
-            workPay += Number(rec.snapshotRate);
-        });
-        
+        let workPay = monthSites.reduce((acc, s) => acc + Number(s.workers.find(sw => sw.id === w.id).snapshotRate), 0);
         const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
         const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
         
@@ -772,273 +855,145 @@ function openWorkerModal(id) {
         document.getElementById('wExtraTotal').innerText = extraSum.toLocaleString();
         document.getElementById('wFinalPay').innerText = (workPay + extraSum).toLocaleString();
         
-        // 渲染雜費列表
         const exList = document.getElementById('wExtraList');
         exList.innerHTML = "";
         monthExtras.forEach(ex => {
-            const div = document.createElement('div');
-            div.style.display = 'flex'; div.style.justifyContent='space-between'; div.style.fontSize='0.9rem'; div.style.marginBottom='5px';
-            div.innerHTML = `<span>${ex.date.slice(5)} ${ex.name}</span> <span>$${ex.amount} <span style="color:red;cursor:pointer" onclick="delExtra('${ex.id}', '${w.id}')">✕</span></span>`;
-            exList.appendChild(div);
+            exList.innerHTML += `<div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:5px"><span>${ex.date.slice(5)} ${ex.name}</span><span>$${ex.amount} <span style="color:red" onclick="delExtra('${ex.id}','${w.id}')">✕</span></span></div>`;
         });
-        
     } else {
-        statBlock.style.display = 'none';
-        extraBlock.style.display = 'none';
+        document.getElementById('wStatsBlock').style.display = 'none';
+        document.getElementById('wExtraBlock').style.display = 'none';
     }
-    
     openModal('modalWorker');
 }
 
 function saveWorker() {
     const id = document.getElementById('wId').value;
     const name = document.getElementById('wName').value;
-    const rate = document.getElementById('wRate').value;
-    
-    if(!name) return alert("請輸入姓名");
-    
     const data = {
         id: id || 'w'+Date.now(),
         name: name,
-        rate: rate,
+        rate: document.getElementById('wRate').value,
         isTop: document.getElementById('wTop').checked,
         phone: document.getElementById('wPhone').value,
         note: document.getElementById('wNote').value
     };
+    if(!name) return alert('請輸入姓名');
     
-    if(id) {
-        const idx = db.workers.findIndex(x => x.id === id);
-        db.workers[idx] = data;
-    } else {
-        db.workers.push(data);
-    }
+    if(id) db.workers[db.workers.findIndex(x => x.id === id)] = data;
+    else db.workers.push(data);
     
-    saveDB();
-    closeModal('modalWorker');
-    renderAll();
+    saveDB(); closeModal('modalWorker'); renderAll();
 }
 
 function delWorker() {
-    if(confirm('確定刪除？這將同時刪除此人的雜費紀錄，但歷史案場紀錄會保留。')) {
+    if(confirm('刪除師傅？')) {
         const id = document.getElementById('wId').value;
         db.workers = db.workers.filter(x => x.id !== id);
         db.extras = db.extras.filter(e => e.wid !== id);
-        saveDB();
-        closeModal('modalWorker');
-        renderAll();
+        saveDB(); closeModal('modalWorker'); renderAll();
     }
 }
 
-/* --- 雜費系統 --- */
+/* --- 雜費 & 多人雜費 --- */
 function toggleAddExtra() {
     const box = document.getElementById('addExtraBox');
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
     document.getElementById('exDate').value = new Date().toISOString().split('T')[0];
 }
-
 function saveOneExtra() {
     const wid = document.getElementById('wId').value;
-    const date = document.getElementById('exDate').value;
-    const name = document.getElementById('exName').value;
-    const amt = document.getElementById('exAmt').value;
-    
-    if(!name || !amt) return alert('請填寫完整');
-    
-    db.extras.push({ id: 'e'+Date.now(), wid: wid, date: date, name: name, amount: amt });
-    saveDB();
-    openWorkerModal(wid); // 重新渲染 Modal
+    db.extras.push({ id:'e'+Date.now(), wid, date: document.getElementById('exDate').value, name: document.getElementById('exName').value, amount: document.getElementById('exAmt').value });
+    saveDB(); openWorkerModal(wid);
 }
-
 function delExtra(eid, wid) {
-    if(confirm('刪除此雜費？')) {
-        db.extras = db.extras.filter(e => e.id !== eid);
-        saveDB();
-        openWorkerModal(wid);
-    }
+    if(confirm('刪除？')) { db.extras = db.extras.filter(e => e.id !== eid); saveDB(); openWorkerModal(wid); }
 }
-
-/* --- 多人雜費 --- */
 function openMultiExtra() {
     document.getElementById('meDate').value = new Date().toISOString().split('T')[0];
     renderMeList();
     openModal('modalMultiExtra');
 }
-
 function renderMeList() {
     const filter = document.getElementById('meFilter').value.toLowerCase();
     const list = document.getElementById('meList');
     list.innerHTML = "";
-    
     db.workers.forEach(w => {
         if(w.name.toLowerCase().includes(filter)) {
-            const div = document.createElement('div');
-            div.className = 'chk-row';
+            const div = document.createElement('div'); div.className = 'chk-row';
             div.innerHTML = `<span>${w.name}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
             list.appendChild(div);
         }
     });
 }
-
 function saveMultiExtra() {
     const date = document.getElementById('meDate').value;
     const name = document.getElementById('meName').value;
     const amt = document.getElementById('meAmt').value;
     const chks = document.querySelectorAll('.me-chk:checked');
-    
     if(!name || !amt || chks.length === 0) return alert('資料不完整');
-    
-    chks.forEach(chk => {
-        db.extras.push({ id: 'e'+Date.now()+Math.random(), wid: chk.value, date: date, name: name, amount: amt });
-    });
-    
-    saveDB();
-    closeModal('modalMultiExtra');
-    renderAll();
+    chks.forEach(c => db.extras.push({ id:'e'+Date.now()+Math.random(), wid: c.value, date, name, amount: amt }));
+    saveDB(); closeModal('modalMultiExtra'); renderAll();
 }
 
-/* --- 案場請款管理 --- */
-function openPaymentModal() {
-    const list = document.getElementById('payList');
-    list.innerHTML = "";
-    
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
-    
-    monthSites.forEach(s => {
-        // 查找此案場是否已請款
-        const paidIdx = db.payments.findIndex(p => p.siteId === s.id);
-        const isPaid = paidIdx > -1;
-        
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.style.padding = '10px';
-        div.style.marginBottom = '8px';
-        div.style.borderLeft = isPaid ? '4px solid #aaa' : '4px solid var(--primary)';
-        if(isPaid) div.style.color = '#999';
-        
-        div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <b>${s.date.slice(5)} ${s.name}</b>
-                    ${isPaid ? '<span style="font-size:0.8rem"> (已請款)</span>' : ''}
-                </div>
-                <input type="checkbox" ${isPaid ? 'checked' : ''} onchange="togglePay('${s.id}', this)">
-            </div>
-        `;
-        list.appendChild(div);
-    });
-    
-    if(monthSites.length === 0) list.innerHTML = "<p style='text-align:center;color:#999'>本月無案場</p>";
-    openModal('modalPayment');
-}
-
-function togglePay(sid, chk) {
-    if(chk.checked) {
-        if(confirm('確認標記為「已請款」？')) {
-            db.payments.push({ siteId: sid, date: new Date().toISOString() });
-        } else {
-            chk.checked = false;
-        }
-    } else {
-        if(confirm('確認取消請款狀態？')) {
-            db.payments = db.payments.filter(p => p.siteId !== sid);
-        } else {
-            chk.checked = true;
-        }
-    }
-    saveDB();
-    openPaymentModal(); // 重繪
-}
-
-/* --- 設定頁面功能 --- */
+/* --- 系統設定 --- */
 function renderThemeGrid() {
     const box = document.getElementById('themeBox');
     box.innerHTML = "";
     THEMES.forEach((t, i) => {
         const dot = document.createElement('div');
         dot.className = `theme-dot ${db.settings.theme === i ? 'active' : ''}`;
-        dot.style.background = t.c;
-        dot.onclick = () => { db.settings.theme = i; saveDB(); applyTheme(i); renderThemeGrid(); renderAll(); };
+        dot.style.background = t.hex;
+        dot.onclick = () => { db.settings.theme = i; saveDB(); applyTheme(i); renderThemeGrid(); renderSiteColorBox(); };
         box.appendChild(dot);
     });
 }
-
-function renderSiteColorBox() {
+function renderSiteColorBox(selectedIdx = 0) {
     const box = document.getElementById('sColorBox');
     box.innerHTML = "";
-    THEMES.forEach((t) => {
+    THEMES.forEach((t, i) => {
         const dot = document.createElement('div');
-        dot.className = 'theme-dot';
-        dot.style.background = t.c;
+        dot.className = `theme-dot ${selectedIdx === i ? 'active' : ''}`;
+        dot.style.background = t.hex;
+        dot.dataset.idx = i;
+        dot.onclick = () => { 
+            box.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active')); 
+            dot.classList.add('active'); 
+        };
         box.appendChild(dot);
     });
 }
-
-function applyTheme(idx) {
-    const t = THEMES[idx] || THEMES[0];
+function applyTheme(i) {
+    const t = THEMES[i] || THEMES[0];
     const r = document.documentElement.style;
-    r.setProperty('--primary', t.c);
-    r.setProperty('--primary-light', t.bg);
-    r.setProperty('--primary-grad', `linear-gradient(135deg, ${t.c}, #888)`);
+    r.setProperty('--theme-rgb', t.rgb); // 注入 RGB
 }
-
 function toggleGasLock() {
     const isLocked = document.getElementById('gasLock').checked;
     const inp = document.getElementById('gasUrl');
-    if(isLocked) {
-        inp.classList.add('input-locked');
-    } else {
-        if(db.settings.gasLock && !confirm('確定要解除鎖定並修改網址嗎？')) {
-            document.getElementById('gasLock').checked = true;
-            return;
-        }
-        inp.classList.remove('input-locked');
-    }
-    db.settings.gasLock = isLocked;
-    db.settings.gasUrl = inp.value;
-    saveDB();
+    if(isLocked) { inp.style.background='#eee'; inp.disabled=true; }
+    else { if(db.settings.gasLock && !confirm('解除鎖定？')) { document.getElementById('gasLock').checked=true; return; } inp.style.background='#FAFAFA'; inp.disabled=false; }
+    db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
-
 function masterReset() {
-    if(confirm('⚠️ 警告：這將刪除所有資料！(1/3)')) {
-        if(confirm('真的確定嗎？無法復原喔！(2/3)')) {
-            if(confirm('最後確認：清空所有資料？(3/3)')) {
-                localStorage.removeItem('ENG_LEDGER_ULTIMATE');
-                location.reload();
-            }
-        }
-    }
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_REBORN'); location.reload(); }
 }
 
-/* --- 頁面切換與彈窗控制 --- */
+/* --- Modal Helper --- */
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = 'flex'; setTimeout(() => m.style.opacity = 1, 10);
+}
+function closeModal(id) {
+    if(!id) document.querySelectorAll('.overlay').forEach(o => { o.style.opacity=0; setTimeout(()=>o.style.display='none',200); });
+    else { const m = document.getElementById(id); m.style.opacity=0; setTimeout(()=>m.style.display='none',200); }
+}
 function switchPage(pid) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-'+pid).classList.add('active');
-    
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('nav-'+pid).classList.add('active');
-    
-    if(pid === 'cal') renderCalendar(); // 確保日曆重繪
-}
-
-function openModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = 'flex';
-    setTimeout(() => m.style.opacity = 1, 10);
-}
-
-function closeModal(id) {
-    // 如果沒傳 id，關閉所有 overlays
-    if(!id) {
-        document.querySelectorAll('.overlay').forEach(o => {
-            o.style.opacity = 0;
-            setTimeout(() => o.style.display = 'none', 200);
-        });
-        return;
-    }
-    const m = document.getElementById(id);
-    m.style.opacity = 0;
-    setTimeout(() => m.style.display = 'none', 200);
+    if(pid==='cal') { renderCalendar(); }
 }
 </script>
 </body>
