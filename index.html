@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate V3</title>
+    <title>工程帳本 Ultimate Final v2</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -15,7 +15,7 @@
             
             /* 背景邏輯 */
             --bg-cal: rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.4);
-            --bg-std: #F8F9FA; 
+            --bg-std: #F8F9FA; /* 人員與設定頁的背景 */
             
             --bg-card: #FFFFFF;
             --text-main: #333333;
@@ -100,6 +100,7 @@
             width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; 
             border-radius: 50%; z-index: 2; flex-shrink: 0;
         }
+        /* 今日樣式 */
         .day-cell.today .day-num { background: #E0E0E0; color: #333; font-weight: bold; } 
         .is-weekend { color: var(--danger); }
 
@@ -126,7 +127,7 @@
 
         .worker-card { display: flex; justify-content: space-between; align-items: center; padding: 18px; margin-bottom: 10px; border: 1px solid var(--border); }
         
-        /* 按鈕優化 */
+        /* 按鈕優化: 漸層 */
         .btn { 
             width: 100%; padding: 14px; border: none; border-radius: 14px; 
             font-weight: 700; font-size: 16px; cursor: pointer; color: white; 
@@ -172,7 +173,11 @@
             border-radius: 24px; padding: 24px; overflow-y: auto; position: relative;
             transform: scale(0.95); transition: transform 0.2s;
         }
-        .modal-close { position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; display:flex; align-items:center; justify-content:center; background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer; }
+        .modal-close { 
+            position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; 
+            display:flex; align-items:center; justify-content:center; 
+            background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer; 
+        }
         
         .quick-site-row {
             display: flex; justify-content: space-between; align-items: center;
@@ -188,10 +193,11 @@
             padding: 0 5px; margin: 15px 0; 
         }
         .theme-dot { 
-            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; 
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; 
+            border: 2px solid transparent; /* 修正線框粗細 */
             transition: transform 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
         }
-        .theme-dot.active { transform: scale(1.2); border-color: var(--text-main); }
+        .theme-dot.active { transform: scale(1.15); border-color: var(--text-main); }
 
         /* 底部導航 */
         .bottom-nav {
@@ -318,7 +324,7 @@
             <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>人員
         </div>
         <div class="nav-item" id="nav-set" onclick="switchPage('set')">
-            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>設定
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>設定
         </div>
     </nav>
 
@@ -392,7 +398,7 @@
                 <div style="font-size:0.9rem; font-weight:bold; margin-bottom:5px;">本月薪資</div>
                 <div style="font-size:0.85rem; color:var(--text-sub); line-height:1.6">
                     工天：<span id="wWorkDays">0</span> 天<br>
-                    工資：$<span id="wWorkPay">0</span><br>
+                    工資：$<span id="wWorkPay">0</span> (依上工日薪資)<br>
                     雜費：$<span id="wExtraTotal">0</span>
                 </div>
                 <div style="border-top:1px solid var(--border); margin-top:5px; padding-top:5px; font-weight:800; font-size:1.1rem; text-align:right;">
@@ -655,6 +661,9 @@ function cloneSiteAndEdit(templateSite, targetDate) {
 function renderPickerWheels() {
     const wy = document.getElementById('wheelY');
     const wm = document.getElementById('wheelM');
+    // Ensure no duplicate renders
+    if(wy.children.length > 0) return;
+
     for(let i=2020; i<=2035; i++) {
         const div = document.createElement('div');
         div.className = 'picker-item'; div.innerText = i + '年'; div.dataset.val = i;
@@ -914,9 +923,7 @@ function saveWorker() {
     
     if(id) {
         const idx = db.workers.findIndex(x => x.id === id);
-        // 保留原有的 isDeleted 狀態 (雖然這裡按儲存通常意味著是活耀的，但安全起見)
-        // 實際上如果是編輯，應該不改變 isDeleted，除非我們想「復活」他?
-        // 簡單邏輯：按儲存=復活
+        // 保留原有的 isDeleted 狀態
         db.workers[idx] = { ...db.workers[idx], ...data };
     } else {
         db.workers.push(data);
