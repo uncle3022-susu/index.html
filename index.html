@@ -291,7 +291,7 @@
         <section id="tab-set" class="page">
             <div class="card">
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
-                    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="10.5" r="2.5"></circle><circle cx="8.5" cy="7.5" r="2.5"></circle><circle cx="6.5" cy="12.5" r="2.5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
+                    <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="8" rx="2"></rect><path d="M6 11v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2"></path><path d="M12 15v6"></path><path d="M9 21h6"></path></svg>
                     <h3>主題顏色</h3>
                 </div>
                 <div class="theme-grid" id="themeBox"></div>
@@ -789,7 +789,7 @@ function openPaymentModal() {
         div.style.display = 'flex'; div.style.justifyContent='space-between'; div.style.alignItems='center';
         div.style.borderLeft = allPaid ? '5px solid #ccc' : '5px solid ' + THEMES[db.settings.theme].hex;
         
-        div.innerHTML = `<b>${name}</b> <input type="checkbox" ${allPaid?'checked':''} onchange="toggleGroupPay('${name}', this)">`;
+        div.innerHTML = `<b>${name}</b> <input type="checkbox" style="width:22px;height:22px;accent-color:var(--primary);cursor:pointer" ${allPaid?'checked':''} onchange="toggleGroupPay('${name}', this)">`;
         list.appendChild(div);
     });
     
