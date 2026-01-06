@@ -154,4 +154,352 @@
                 <div style="opacity:0.8; font-size:0.9rem">本月預估支出</div>
                 <div id="totalExp" style="font-size:2.2rem; font-weight:800; margin:5px 0">$0</div>
             </div>
-            <input type="text" class="input
+            <input type="text" class="input-f" placeholder="🔍 搜尋師傅..." oninput="renderWorkers(this.value)">
+            <button class="btn" onclick="openWorkerEdit()">+ 新增師傅</button>
+            <div id="workerList" style="margin-top:15px"></div>
+        </section>
+
+        <section id="pg-set" class="page">
+            <div class="card">
+                <h3>🎨 選擇主題顏色</h3>
+                <div class="theme-row" id="themeBox"></div>
+            </div>
+            <div class="card">
+                <h3>🛠 資料庫</h3>
+                <button class="btn btn-danger" onclick="resetApp()">⚠️ 重置所有資料</button>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" id="nav-cal" onclick="switchPage('cal')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>日曆</span>
+        </div>
+        <div class="nav-item" id="nav-work" onclick="switchPage('work')">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path></svg><span>人員</span>
+        </div>
+        <div class="nav-item" id="nav-set" onclick="switchPage('set')">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span>設定</span>
+        </div>
+    </nav>
+
+    <div id="modalDate" class="overlay" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="picker-header">
+                <span onclick="closeModal()" style="font-weight:400; color:#999; cursor:pointer">取消</span>
+                <span>選擇月份</span>
+                <span onclick="confirmDate()" style="cursor:pointer">確定</span>
+            </div>
+            <div class="picker-body">
+                <div class="wheel-highlight"></div>
+                <div id="wh-y" class="wheel"></div>
+                <div id="wh-m" class="wheel"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalInput" class="overlay" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div id="inputBody"></div>
+        </div>
+    </div>
+
+<script>
+// --- 全域變數 ---
+// 注意：我更換了 key 為 'ENG_LEDGER_V3' 確保不讀取舊的錯誤資料
+const DB_KEY = 'ENG_LEDGER_V3';
+let db = { workers: [], sites: [], theme: 'matcha' };
+let curDate = new Date();
+let selDate = "";
+
+// 主題定義
+const THEMES = {
+    'matcha': { color: '#5B9A8B', bg: '#F4F7F6' },
+    'ocean':  { color: '#2563EB', bg: '#F0F9FF' },
+    'sunset': { color: '#EA580C', bg: '#FFF7ED' },
+    'dark':   { color: '#6366F1', bg: '#121212', mode:'dark' }
+};
+
+// --- 初始化 (錯誤處理) ---
+window.onload = function() {
+    try {
+        const raw = localStorage.getItem(DB_KEY);
+        if (raw) db = JSON.parse(raw);
+        
+        // 確保結構完整 (修復可能的 undefined 錯誤)
+        if(!Array.isArray(db.workers)) db.workers = [];
+        if(!Array.isArray(db.sites)) db.sites = [];
+        if(!db.theme) db.theme = 'matcha';
+
+        applyTheme(db.theme);
+        curDate.setDate(1); // 設為1號避免月底切換Bug
+        renderAll();
+    } catch (e) {
+        alert("資料讀取錯誤，系統將自動重置。\n" + e.message);
+        localStorage.removeItem(DB_KEY);
+        location.reload();
+    }
+};
+
+function save() {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
+// --- 介面渲染 ---
+function renderAll() {
+    // 更新標題
+    document.getElementById('dispYear').innerText = curDate.getFullYear();
+    document.getElementById('dispMonth').innerText = curDate.getMonth() + 1;
+    
+    renderCal();
+    renderWorkers();
+    renderThemes();
+}
+
+function renderCal() {
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = "";
+    const y = curDate.getFullYear(), m = curDate.getMonth();
+    
+    // 計算空白
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInM = new Date(y, m+1, 0).getDate();
+    
+    for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+    
+    const today = new Date();
+    
+    for(let d=1; d<=daysInM; d++) {
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const hasWork = db.sites.some(s => s.date === dateStr);
+        const isToday = (today.getFullYear()===y && today.getMonth()===m && today.getDate()===d);
+        
+        grid.innerHTML += `
+            <div class="day-cell ${isToday?'today':''} ${hasWork?'has-work':''}" onclick="clkDay('${dateStr}')">
+                <div class="day-num">${d}</div>
+                <div class="day-dot"></div>
+            </div>`;
+    }
+}
+
+function clkDay(str) {
+    selDate = str;
+    document.getElementById('selDateTxt').innerText = `📅 ${str}`;
+    document.getElementById('dayDetail').style.display = 'block';
+    const list = document.getElementById('siteList');
+    list.innerHTML = "";
+    
+    const sites = db.sites.filter(s => s.date === str);
+    if(sites.length === 0) list.innerHTML = `<div style="color:#aaa;text-align:center;padding:10px">無資料</div>`;
+    
+    sites.forEach(s => {
+        list.innerHTML += `
+            <div class="card" style="padding:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+                <div><b>${s.name}</b> <span style="font-size:0.8rem;color:#888">${s.wIds.length}人</span></div>
+                <button class="btn btn-danger" style="width:auto;margin:0;padding:6px 12px;font-size:12px" onclick="delSite('${s.id}')">刪</button>
+            </div>`;
+    });
+    
+    // 自動捲動到下方
+    setTimeout(() => document.getElementById('dayDetail').scrollIntoView({behavior:'smooth'}), 100);
+}
+
+function renderWorkers(filter = "") {
+    const list = document.getElementById('workerList');
+    if(!list) return; // 避免在非人員頁出錯
+    list.innerHTML = "";
+    let total = 0;
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    
+    db.workers.forEach(w => {
+        if(filter && !w.name.includes(filter)) return;
+        
+        // 簡單計算
+        let count = db.sites.filter(s => s.date.startsWith(ym) && s.wIds.includes(w.id)).length;
+        let sub = count * Number(w.rate);
+        total += sub;
+        
+        list.innerHTML += `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px;" onclick="openWorkerEdit('${w.id}')">
+                <div><b>${w.name}</b><div style="font-size:0.8rem;color:#999">$${w.rate}/日</div></div>
+                <div style="text-align:right">
+                    <div style="font-weight:bold;color:var(--primary)">$${sub.toLocaleString()}</div>
+                    <div style="font-size:0.8rem;color:#999">${count}工</div>
+                </div>
+            </div>`;
+    });
+    document.getElementById('totalExp').innerText = `$${total.toLocaleString()}`;
+}
+
+// --- 編輯功能 (彈窗) ---
+function openWorkerEdit(id) {
+    const w = id ? db.workers.find(x => x.id === id) : {id:'', name:'', rate:''};
+    const html = `
+        <h3>${id?'編輯':'新增'}師傅</h3>
+        <input id="inpName" class="input-f" placeholder="姓名" value="${w.name}">
+        <input id="inpRate" type="number" class="input-f" placeholder="日薪" value="${w.rate}">
+        <button class="btn" onclick="saveWorker('${w.id}')">儲存</button>
+        ${id ? `<button class="btn btn-danger" onclick="delWorker('${w.id}')">刪除師傅</button>` : ''}
+    `;
+    showInputModal(html);
+}
+
+function saveWorker(id) {
+    const name = document.getElementById('inpName').value;
+    const rate = document.getElementById('inpRate').value;
+    if(!name) return alert("請輸入姓名");
+    
+    if(id) {
+        const w = db.workers.find(x => x.id === id);
+        w.name = name; w.rate = rate;
+    } else {
+        db.workers.push({ id: 'w'+Date.now(), name, rate });
+    }
+    save(); closeModal(); renderWorkers();
+}
+
+function delWorker(id) {
+    if(confirm("確定刪除？")) {
+        db.workers = db.workers.filter(x => x.id !== id);
+        save(); closeModal(); renderWorkers();
+    }
+}
+
+function openSiteEdit() {
+    const html = `
+        <h3>新增案場 (${selDate})</h3>
+        <input id="inpSite" class="input-f" placeholder="案場名稱">
+        <div style="max-height:150px; overflow-y:auto; margin:10px 0; border:1px solid #eee; padding:10px; border-radius:10px">
+            ${db.workers.map(w => `
+                <div style="padding:5px 0"><label><input type="checkbox" class="wk-chk" value="${w.id}"> ${w.name}</label></div>
+            `).join('')}
+        </div>
+        <button class="btn" onclick="saveSite()">儲存</button>
+    `;
+    showInputModal(html);
+}
+
+function saveSite() {
+    const name = document.getElementById('inpSite').value;
+    if(!name) return alert("請輸入名稱");
+    const chks = document.querySelectorAll('.wk-chk:checked');
+    const wIds = Array.from(chks).map(c => c.value);
+    
+    db.sites.push({ id:'s'+Date.now(), date:selDate, name, wIds });
+    save(); closeModal(); renderCal(); clkDay(selDate); renderWorkers();
+}
+
+function delSite(id) {
+    if(confirm("確定刪除？")) {
+        db.sites = db.sites.filter(s => s.id !== id);
+        save(); renderCal(); clkDay(selDate); renderWorkers();
+    }
+}
+
+// --- 滾輪邏輯 (Simplified for stability) ---
+let wheelY, wheelM;
+function openDatePicker() {
+    const o = document.getElementById('modalDate');
+    o.style.display = 'flex';
+    setTimeout(() => { o.style.opacity = 1; o.querySelector('.modal-box').style.transform = 'translateY(0)'; }, 10);
+    
+    // 生成滾輪內容
+    genWheel('wh-y', 2020, 2035, curDate.getFullYear());
+    genWheel('wh-m', 1, 12, curDate.getMonth()+1);
+}
+
+function genWheel(id, min, max, cur) {
+    const el = document.getElementById(id);
+    el.innerHTML = `<div style="height:70px"></div>`; // spacer
+    for(let i=min; i<=max; i++) {
+        const div = document.createElement('div');
+        div.className = `wheel-item ${i===cur?'selected':''}`;
+        div.innerText = i + (id==='wh-y'?'年':'月');
+        div.dataset.val = i;
+        el.appendChild(div);
+    }
+    el.innerHTML += `<div style="height:70px"></div>`; // spacer
+    
+    // 自動滾動到選中位置
+    setTimeout(() => {
+        const sel = el.querySelector('.selected');
+        if(sel) el.scrollTop = sel.offsetTop - 70;
+    }, 50);
+
+    // 監聽滾動 (簡單版)
+    el.onscroll = () => {
+        const center = el.scrollTop + 90;
+        el.querySelectorAll('.wheel-item').forEach(d => {
+            const top = d.offsetTop;
+            if(top > center-25 && top < center+25) {
+                el.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));
+                d.classList.add('selected');
+            }
+        });
+    };
+}
+
+function confirmDate() {
+    const yEl = document.querySelector('#wh-y .selected');
+    const mEl = document.querySelector('#wh-m .selected');
+    if(yEl && mEl) {
+        curDate.setFullYear(parseInt(yEl.dataset.val));
+        curDate.setMonth(parseInt(mEl.dataset.val)-1);
+        renderAll();
+    }
+    closeModal();
+}
+
+// --- 系統功能 ---
+function showInputModal(html) {
+    document.getElementById('inputBody').innerHTML = html;
+    const o = document.getElementById('modalInput');
+    o.style.display = 'flex';
+    setTimeout(() => { o.style.opacity=1; o.querySelector('.modal-box').style.transform = 'translateY(0)'; }, 10);
+}
+
+function closeModal() {
+    document.querySelectorAll('.overlay').forEach(o => {
+        o.style.opacity=0;
+        const box = o.querySelector('.modal-box');
+        if(box) box.style.transform = 'translateY(100%)';
+        setTimeout(() => o.style.display='none', 300);
+    });
+}
+
+function switchPage(p) {
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    document.getElementById('pg-'+p).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    document.getElementById('nav-'+p).classList.add('active');
+}
+
+function renderThemes() {
+    const box = document.getElementById('themeBox');
+    box.innerHTML = "";
+    for(let k in THEMES) {
+        box.innerHTML += `<div class="theme-dot ${db.theme===k?'active':''}" style="background:${THEMES[k].color}" onclick="applyTheme('${k}')"></div>`;
+    }
+}
+
+function applyTheme(key) {
+    db.theme = key;
+    save();
+    const t = THEMES[key];
+    const r = document.documentElement.style;
+    r.setProperty('--primary', t.color);
+    r.setProperty('--bg-body', t.bg);
+    if(t.mode==='dark') document.documentElement.setAttribute('data-mode','dark');
+    else document.documentElement.removeAttribute('data-mode');
+    renderThemes();
+}
+
+function resetApp() {
+    if(confirm("警告：這會刪除所有資料！")) {
+        localStorage.removeItem(DB_KEY);
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>
