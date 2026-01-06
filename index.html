@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Reborn</title>
+    <title>工程帳本 Ultimate Final</title>
     <style>
         /* --- 1. 核心變數 & 主題系統 --- */
         :root {
-            /* 預設: 抹茶綠 RGB */
-            --theme-rgb: 91, 154, 139; 
-            --primary: rgb(var(--theme-rgb));
-            --bg-body: rgba(var(--theme-rgb), 0.4); /* 需求: 主題色 40% 透明 */
+            /* 預設: 抹茶綠 */
+            --theme-r: 91; --theme-g: 154; --theme-b: 139;
+            --primary: rgb(var(--theme-r), var(--theme-g), var(--theme-b));
+            /* 背景色：主題色 40% 透明度 */
+            --bg-body: rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.4);
             
             --bg-card: #FFFFFF;
             --text-main: #333333;
@@ -30,7 +31,7 @@
         /* --- 2. 頂部導航 --- */
         .app-header {
             position: sticky; top: 0; z-index: 50; 
-            background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 1px 0 rgba(0,0,0,0.05);
         }
@@ -47,9 +48,10 @@
 
         .card { background: var(--bg-card); border-radius: 18px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); position: relative; }
 
-        /* --- 3. 日曆系統 (Grid + 手勢 + 自適應高度) --- */
-        .cal-wrapper { touch-action: pan-y pinch-zoom; /* 允許垂直滾動，水平交給手勢 */ }
-        .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; }
+        /* --- 3. 日曆系統 (Grid Fix: minmax(0, 1fr)) --- */
+        .cal-wrapper { touch-action: pan-y pinch-zoom; }
+        /* 關鍵修正：minmax(0, 1fr) 確保格子不會被內容撐開 */
+        .grid-7 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); width: 100%; }
         
         .week-header { 
             text-align: center; font-size: 0.8rem; color: var(--text-sub); 
@@ -58,29 +60,29 @@
         }
         
         .day-cell {
-            min-height: 85px; height: auto; /* 依內容長高 */
+            min-height: 85px; height: auto;
             border-radius: 10px; padding: 2px; margin-bottom: 4px;
             display: flex; flex-direction: column; align-items: center; 
             border: 1px solid transparent; cursor: pointer; position: relative;
+            overflow: hidden; /* 防止溢出 */
         }
         
-        /* 當日日期: 小反灰 */
         .day-num { 
             font-size: 1rem; font-weight: 500; margin-bottom: 3px; 
             width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; 
-            border-radius: 50%; z-index: 2;
+            border-radius: 50%; z-index: 2; flex-shrink: 0;
         }
         .day-cell.today .day-num { background: #E0E0E0; color: #333; } 
         .is-weekend { color: var(--danger); }
 
-        /* 案場標籤: 寬度固定，字體動態 */
+        /* 案場標籤: 強制不換行，超出顯示... */
         .site-tag {
             width: 95%; max-width: 100%;
-            font-size: 11px; /* 初始大小 */
+            font-size: 11px; 
             padding: 3px 2px; border-radius: 4px; 
             color: white; margin-bottom: 2px; 
             text-align: center; font-weight: bold; line-height: 1.2;
-            white-space: nowrap; overflow: hidden; /* 防止撐開 */
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         /* --- 4. 儀表板 & 列表 --- */
@@ -90,8 +92,8 @@
             display: flex; flex-direction: column; justify-content: center; 
             box-shadow: var(--shadow); cursor: pointer; position: relative; overflow: hidden; 
         }
-        .dash-card.left { background: #546E7A; /* 案場請款較深色 */ }
-        .dash-card.right { background: #263238; /* 總支出深色 */ }
+        .dash-card.left { background: #546E7A; }
+        .dash-card.right { background: #263238; }
         .dash-label { font-size: 0.85rem; opacity: 0.9; margin-bottom: 4px; }
         .dash-val { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px; }
 
@@ -111,7 +113,7 @@
         .input-f { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; margin-bottom: 12px; background: #FAFAFA; outline: none; }
         .input-f:focus { border-color: var(--primary); background: #fff; }
 
-        /* --- 5. 滾輪選擇器 (iOS Focus Effect) --- */
+        /* --- 5. 滾輪選擇器 (iOS Focus Logic Updated) --- */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 2000; display: none; opacity: 0;
@@ -134,9 +136,9 @@
         
         .picker-item { 
             height: 40px; line-height: 40px; scroll-snap-align: center; 
-            font-size: 1.1rem; color: #aaa; transition: all 0.2s ease; 
+            font-size: 1.1rem; color: #aaa; transition: all 0.1s; 
         }
-        /* 灰框範圍內的特效 */
+        /* 選中樣式 */
         .picker-item.active { 
             color: #333; font-size: 1.5rem; font-weight: 800; transform: scale(1.1); 
         }
@@ -145,7 +147,7 @@
             background: rgba(0,0,0,0.04); border-top: 1px solid #eee; border-bottom: 1px solid #eee; pointer-events: none; 
         }
 
-        /* --- 6. Quick Add Modal (本月紀錄) --- */
+        /* --- 6. Quick Add Modal --- */
         .modal-box {
             background: #fff; width: 88%; max-width: 380px; max-height: 85vh;
             border-radius: 24px; padding: 24px; overflow-y: auto; position: relative;
@@ -224,9 +226,13 @@
             </div>
 
             <div class="card">
-                <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                     <span style="font-size:1.2rem">🔍</span>
                     <input type="text" id="wSearch" class="input-f" style="margin:0; border:none; background:transparent;" placeholder="搜尋師傅..." oninput="renderWorkerList()">
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; border-top:1px solid #eee; padding-top:10px;">
+                    <span style="font-size:1.2rem">📅</span>
+                    <input type="date" id="wDateFilter" class="input-f" style="margin:0; border:none; background:transparent; padding:0;" onchange="renderWorkerList()">
                 </div>
                 <div style="height:1px; background:#eee; margin:10px 0;"></div>
                 <button class="btn" style="margin-top:0" onclick="openWorkerModal()">+ 新增師傅</button>
@@ -401,15 +407,14 @@
 
 <script>
 /* --- 系統核心邏輯 --- */
-// 7種 RGB 主題色 (對應圖片)
 const THEMES = [
-    { rgb: '91, 154, 139', hex: '#5B9A8B' }, // 抹茶綠
-    { rgb: '244, 196, 48', hex: '#F4C430' }, // 黃
-    { rgb: '77, 182, 172', hex: '#4DB6AC' }, // 藍綠
-    { rgb: '244, 143, 177', hex: '#F48FB1' }, // 粉紅
-    { rgb: '121, 134, 203', hex: '#7986CB' }, // 紫
-    { rgb: '229, 115, 115', hex: '#E57373' }, // 紅
-    { rgb: '63, 81, 181',  hex: '#3F51B5' }  // 深藍
+    { r:91, g:154, b:139, hex:'#5B9A8B' }, // 抹茶綠
+    { r:244, g:196, b:48, hex:'#F4C430' }, // 黃
+    { r:77, g:182, b:172, hex:'#4DB6AC' }, // 藍綠
+    { r:244, g:143, b:177, hex:'#F48FB1' }, // 粉紅
+    { r:121, g:134, b:203, hex:'#7986CB' }, // 紫
+    { r:229, g:115, b:115, hex:'#E57373' }, // 紅
+    { r:63, g:81, b:181, hex:'#3F51B5' }  // 深藍
 ];
 
 let db = {
@@ -421,15 +426,13 @@ let curDate = new Date();
 let selectedDateStr = "";
 
 window.onload = async () => {
-    const local = localStorage.getItem('ENG_LEDGER_REBORN');
+    const local = localStorage.getItem('ENG_LEDGER_FINAL');
     if(local) db = JSON.parse(local);
     
     applyTheme(db.settings.theme);
     renderPickerWheels();
     updateHeaderDate();
     renderAll();
-    
-    // 手勢監聽
     initGestures();
 
     if(db.settings.gasUrl) {
@@ -441,7 +444,7 @@ window.onload = async () => {
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_REBORN', JSON.stringify(db));
+    localStorage.setItem('ENG_LEDGER_FINAL', JSON.stringify(db));
     syncCloud(false);
 }
 
@@ -473,13 +476,12 @@ function renderAll() {
 function initGestures() {
     const cal = document.getElementById('calWrapper');
     let startX = 0;
-    
     cal.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
     cal.addEventListener('touchend', e => {
         let diff = e.changedTouches[0].clientX - startX;
-        if(Math.abs(diff) > 50) { // 門檻
-            if(diff > 0) changeMonth(-1); // 右滑 -> 上個月
-            else changeMonth(1); // 左滑 -> 下個月
+        if(Math.abs(diff) > 50) {
+            if(diff > 0) changeMonth(-1);
+            else changeMonth(1);
         }
     });
 }
@@ -527,11 +529,9 @@ function renderCalendar() {
         grid.appendChild(cell);
     }
     
-    // 延遲執行字體調整
     setTimeout(resizeTags, 10);
 }
 
-// 動態調整字體大小，確保不換行但塞得下
 function resizeTags() {
     document.querySelectorAll('.site-tag').forEach(el => {
         let size = 11;
@@ -543,29 +543,29 @@ function resizeTags() {
     });
 }
 
-/* --- Quick Add Logic (本月快取) --- */
+/* --- Quick Add Logic --- */
 function openQuickAdd(dateStr) {
     selectedDateStr = dateStr;
     document.getElementById('quickDateTitle').innerText = dateStr;
     
-    // 找出本日已存在的案場
+    // 當日已存在的
     const daySites = db.sites.filter(s => s.date === dateStr);
     const dayList = document.getElementById('dayExistList');
     dayList.innerHTML = "";
     daySites.forEach(s => {
         const row = document.createElement('div');
         row.className = 'quick-site-row';
-        row.style.background = '#fff5f5'; // 區分
+        row.style.background = '#fff5f5'; 
         row.innerHTML = `<span style="font-weight:bold">${s.name} (${s.workers.length}人)</span> <span style="color:#e53935;font-weight:bold" onclick="event.stopPropagation();delSite('${s.id}')">刪除</span>`;
         row.onclick = () => openSiteModal(s.id);
         dayList.appendChild(row);
     });
 
-    // 找出本月曾經新增過的 (Unique)
+    // 本月曾建立的
     const ym = dateStr.slice(0, 7);
     const monthSites = db.sites.filter(s => s.date.startsWith(ym));
     const uniqueMap = new Map();
-    monthSites.forEach(s => uniqueMap.set(s.name, s)); // Keep last one for config clone
+    monthSites.forEach(s => uniqueMap.set(s.name, s));
     
     const quickList = document.getElementById('quickSiteList');
     quickList.innerHTML = "";
@@ -575,31 +575,33 @@ function openQuickAdd(dateStr) {
         row.className = 'quick-site-row';
         const c = THEMES[s.colorIdx || 0].hex;
         row.innerHTML = `<span style="display:flex;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></div>${name}</span> <span>+</span>`;
-        // 點擊複製
-        row.onclick = () => cloneSite(s, dateStr);
+        // 核心修改：點擊後建立案場並直接打開編輯 Modal
+        row.onclick = () => cloneSiteAndEdit(s, dateStr);
         quickList.appendChild(row);
     });
 
     if(uniqueMap.size === 0) quickList.innerHTML = "<div style='text-align:center;color:#ccc;padding:10px'>本月尚無其他案場</div>";
-
     openModal('modalQuickAdd');
 }
 
-function cloneSite(templateSite, targetDate) {
+function cloneSiteAndEdit(templateSite, targetDate) {
     const newSite = {
         id: 's' + Date.now(),
         date: targetDate,
         name: templateSite.name,
         colorIdx: templateSite.colorIdx,
-        workers: templateSite.workers.map(w => ({...w})) // Clone workers
+        workers: [] // 複製案場但不複製師傅(通常要重新選人)，若要複製可改: templateSite.workers.map(w=>({...w}))
     };
     db.sites.push(newSite);
     saveDB();
     closeModal('modalQuickAdd');
     renderAll();
+    
+    // 直接打開編輯視窗
+    setTimeout(() => openSiteModal(newSite.id), 200); 
 }
 
-/* --- iOS 滾輪 --- */
+/* --- iOS 滾輪 (中心點精準判定) --- */
 function renderPickerWheels() {
     const wy = document.getElementById('wheelY');
     const wm = document.getElementById('wheelM');
@@ -619,12 +621,23 @@ function renderPickerWheels() {
 
 function updatePickerFocus(e) {
     const el = e.target;
-    const center = el.scrollTop + 110; // offset
+    const center = el.scrollTop + 110; 
+    
+    // 算法改進：尋找距離中心最近的元素
+    let minDiff = Infinity;
+    let closestItem = null;
+    
     el.querySelectorAll('.picker-item').forEach(it => {
-        const top = it.offsetTop;
-        if(top > center - 25 && top < center + 25) it.classList.add('active');
-        else it.classList.remove('active');
+        const itemCenter = it.offsetTop + it.offsetHeight / 2;
+        const diff = Math.abs(center - itemCenter);
+        if(diff < minDiff) {
+            minDiff = diff;
+            closestItem = it;
+        }
     });
+
+    el.querySelectorAll('.picker-item').forEach(it => it.classList.remove('active'));
+    if(closestItem) closestItem.classList.add('active');
 }
 
 function openDatePicker() {
@@ -634,7 +647,6 @@ function openDatePicker() {
     overlay.style.display = 'flex';
     setTimeout(()=>overlay.style.opacity=1, 10);
     
-    // Scroll to current
     setTimeout(() => {
         const wy = document.getElementById('wheelY');
         const wm = document.getElementById('wheelM');
@@ -665,19 +677,16 @@ function confirmDate() {
     closePicker();
 }
 
-/* --- 案場請款 (合併邏輯) --- */
+/* --- 案場請款 --- */
 function openPaymentModal() {
     const list = document.getElementById('payList');
     list.innerHTML = "";
     
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const monthSites = db.sites.filter(s => s.date.startsWith(ym));
-    
-    // Group by Name
     const uniqueNames = [...new Set(monthSites.map(s => s.name))];
     
     uniqueNames.forEach(name => {
-        // 檢查該名稱本月是否全部已付
         const sitesWithName = monthSites.filter(s => s.name === name);
         const allPaid = sitesWithName.every(s => db.payments.some(p => p.siteId === s.id));
         
@@ -699,25 +708,19 @@ function openPaymentModal() {
 function toggleGroupPay(name, isChecked) {
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const targetSites = db.sites.filter(s => s.date.startsWith(ym) && s.name === name);
-    
     targetSites.forEach(s => {
         if(isChecked) {
-            // Add if not exist
-            if(!db.payments.some(p => p.siteId === s.id)) {
-                db.payments.push({ siteId: s.id, date: new Date().toISOString() });
-            }
+            if(!db.payments.some(p => p.siteId === s.id)) db.payments.push({ siteId: s.id, date: new Date().toISOString() });
         } else {
-            // Remove
             db.payments = db.payments.filter(p => p.siteId !== s.id);
         }
     });
-    saveDB();
-    openPaymentModal(); // Redraw
+    saveDB(); openPaymentModal();
 }
 
 /* --- 案場編輯 --- */
 function openSiteModal(siteId) {
-    closeModal('modalQuickAdd'); // Close prev
+    closeModal('modalQuickAdd');
     openModal('modalSite');
     
     const s = siteId ? db.sites.find(x => x.id === siteId) : { id: '', name: '', colorIdx: 0, workers: [] };
@@ -754,11 +757,8 @@ function saveSite() {
     
     if(!name) return alert("請輸入名稱");
     
-    // Color
     const activeDot = document.querySelector('#sColorBox .active');
     const colorIdx = activeDot ? parseInt(activeDot.dataset.idx) : 0;
-
-    // Workers & Snapshot
     const chks = document.querySelectorAll('#sWorkerList input:checked');
     const selectedIds = Array.from(chks).map(c => c.value);
     
@@ -777,24 +777,21 @@ function saveSite() {
         db.sites[idx] = data;
     } else db.sites.push(data);
     
-    saveDB();
-    closeModal('modalSite');
-    renderAll();
+    saveDB(); closeModal('modalSite'); renderAll();
 }
 
 function delSite(id) {
-    if(!id) id = document.getElementById('sId').value; // from modal
+    if(!id) id = document.getElementById('sId').value;
     if(confirm('確定刪除？')) {
         db.sites = db.sites.filter(x => x.id !== id);
-        saveDB();
-        closeModal(null);
-        renderAll();
+        saveDB(); closeModal(null); renderAll();
     }
 }
 
-/* --- 師傅與其他邏輯 --- */
+/* --- 師傅與邏輯 (含日期搜尋) --- */
 function renderWorkerList() {
     const wSearch = document.getElementById('wSearch').value.toLowerCase();
+    const dFilter = document.getElementById('wDateFilter').value; // 取得日期搜尋值
     const list = document.getElementById('workerList');
     list.innerHTML = "";
     
@@ -802,10 +799,20 @@ function renderWorkerList() {
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const sorted = [...db.workers].sort((a,b) => (b.isTop?1:0) - (a.isTop?1:0));
     
-    sorted.forEach(w => {
-        if(wSearch && !w.name.toLowerCase().includes(wSearch)) return;
+    // 如果有選日期，找出當天有上工的師傅 ID
+    let validWorkerIds = null;
+    if(dFilter) {
+        validWorkerIds = db.sites
+            .filter(s => s.date === dFilter)
+            .flatMap(s => s.workers.map(w => w.id));
+    }
 
-        // Calc
+    sorted.forEach(w => {
+        // 文字搜尋
+        if(wSearch && !w.name.toLowerCase().includes(wSearch)) return;
+        // 日期搜尋：如果開啟了日期過濾，且該師傅不在名單內，跳過
+        if(validWorkerIds && !validWorkerIds.includes(w.id)) return;
+
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let salary = 0;
         monthSites.forEach(s => salary += Number(s.workers.find(sw => sw.id === w.id).snapshotRate));
@@ -843,7 +850,6 @@ function openWorkerModal(id) {
     if(id) {
         document.getElementById('wStatsBlock').style.display = 'block';
         document.getElementById('wExtraBlock').style.display = 'block';
-        // Calc Stats for Modal
         const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let workPay = monthSites.reduce((acc, s) => acc + Number(s.workers.find(sw => sw.id === w.id).snapshotRate), 0);
@@ -966,7 +972,7 @@ function renderSiteColorBox(selectedIdx = 0) {
 function applyTheme(i) {
     const t = THEMES[i] || THEMES[0];
     const r = document.documentElement.style;
-    r.setProperty('--theme-rgb', t.rgb); // 注入 RGB
+    r.setProperty('--theme-r', t.r); r.setProperty('--theme-g', t.g); r.setProperty('--theme-b', t.b);
 }
 function toggleGasLock() {
     const isLocked = document.getElementById('gasLock').checked;
@@ -976,7 +982,7 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_REBORN'); location.reload(); }
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL'); location.reload(); }
 }
 
 /* --- Modal Helper --- */
