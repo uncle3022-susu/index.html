@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v4</title>
+    <title>工程帳本 Ultimate Final v5</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
-            /* 主題色 RGB (預設抹茶綠 #569E8A -> 86, 158, 138) */
+            /* 主題色 RGB (預設抹茶綠) */
             --theme-r: 86;
             --theme-g: 158; --theme-b: 138;
             --primary: rgb(var(--theme-r), var(--theme-g), var(--theme-b));
@@ -18,11 +18,15 @@
             --bg-card: #FFFFFF;
             --text-main: #333333;
             --text-sub: #888888;
-            --text-disabled: #BDBDBD; /* 隱藏文字顏色 */
+            --text-disabled: #BDBDBD;
             --border: #EEEEEE;
             --shadow: 0 4px 15px rgba(0,0,0,0.06);
-            --danger: #D32F2F; /* 刪除按鈕深紅 */
-            --hide-btn: #FF6B6B; /* 隱藏按鈕粉紅/鮭魚色 */
+            
+            /* 還原較亮的紅色 */
+            --danger: #FF6B6B; 
+            /* 隱藏按鈕粉紅/鮭魚色 (維持圖示色系) */
+            --hide-btn: #FF8080; 
+            
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
@@ -124,13 +128,13 @@
         .is-weekend { color: var(--danger);
         }
 
-        /* 修改：圓角標籤 (Pill Shape) */
+        /* 圓角標籤 (Pill Shape) */
         .site-tag {
             width: 95%;
             max-width: 100%;
             font-size: 11px; 
-            padding: 3px 6px; /* 增加左右 padding */
-            border-radius: 50px; /* 圓角膠囊狀 */
+            padding: 3px 6px; 
+            border-radius: 50px; 
             color: white; margin-bottom: 2px; 
             text-align: center; font-weight: bold; line-height: 1.2;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -157,28 +161,39 @@
         .worker-card { display: flex; justify-content: space-between; align-items: center; padding: 18px; margin-bottom: 10px;
             border: 1px solid var(--border); }
         .worker-card.disabled { color: var(--text-disabled); border-color: var(--border); }
-        .worker-card.disabled b { color: var(--text-disabled); } /* 強制標題也變灰 */
+        .worker-card.disabled b { color: var(--text-disabled); } 
         
+        /* --- 按鈕樣式還原與漸層設定 --- */
         .btn { 
             width: 100%;
             padding: 14px; border: none; border-radius: 14px; 
             font-weight: 700; font-size: 16px; cursor: pointer; color: white; 
             margin-top: 10px;
+            /* 還原為主題色漸層 */
             background: linear-gradient(135deg, var(--primary), rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.7));
             box-shadow: 0 4px 12px rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.3); 
             transition: transform 0.1s, box-shadow 0.2s;
         }
         .btn:active { transform: scale(0.97);
         }
-        /* 刪除按鈕 (Danger) */
-        .btn-danger { background: var(--danger);
-            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3); }
-        /* 隱藏按鈕 (Hide - Salmon/Pink) */
-        .btn-hide { background: var(--hide-btn);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); }
-        /* 綠色儲存按鈕 (Standard Success) */
-        .btn-success { background: #569E8A; /* 類似主題綠 */
-             box-shadow: 0 4px 12px rgba(86, 158, 138, 0.3); }
+
+        /* 刪除按鈕 (Danger) - 還原為較淺的紅色漸層 */
+        .btn-danger { 
+            background: linear-gradient(135deg, #FF6B6B, #E53935);
+            box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3); 
+        }
+
+        /* 隱藏按鈕 (Hide - Salmon/Pink) - 改為漸層風格 */
+        .btn-hide { 
+            background: linear-gradient(135deg, #FF9999, #FF6B6B);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); 
+        }
+        
+        /* 取消隱藏狀態 - 較深的灰或藍灰漸層 */
+        .btn-unhide {
+            background: linear-gradient(135deg, #78909C, #546E7A);
+            box-shadow: 0 4px 12px rgba(84, 110, 122, 0.3);
+        }
 
         .btn-ghost { background: var(--bg-std);
             color: var(--text-sub); box-shadow: none; border: 1px solid var(--border); }
@@ -357,7 +372,7 @@
                     <input type="date" id="wDateFilter" class="input-f" style="margin:0; border:none; background:transparent; padding:0;" onchange="renderWorkerList()">
                 </div>
                 <div style="height:1px; background:var(--border); margin:10px 0;"></div>
-                <button class="btn btn-success" style="margin-top:0" onclick="openWorkerModal()">+ 新增師傅</button>
+                <button class="btn" style="margin-top:0" onclick="openWorkerModal()">+ 新增師傅</button>
             </div>
 
             <div id="workerList"></div>
@@ -438,7 +453,7 @@
             </div>
             <h3 id="quickDateTitle" style="margin-top:0; margin-bottom:15px;"></h3>
             
-            <button class="btn btn-success" style="background: linear-gradient(135deg, #a8a8a8, #888); margin-bottom:15px;" onclick="openSiteModal(null)">+ 新增案場</button>
+            <button class="btn" style="margin-bottom:15px;" onclick="openSiteModal(null)">+ 新增案場</button>
             
             <div style="font-size:0.85rem; color:var(--text-sub); margin-bottom:8px;">或複製本月曾經新增過的案場：</div>
             <div id="quickSiteList" style="max-height:200px; overflow-y:auto;"></div>
@@ -467,7 +482,7 @@
             </div>
             <div id="sWorkerList" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); padding:10px; border-radius:10px; margin-bottom:15px;"></div>
 
-            <button class="btn btn-success" onclick="saveSite()">儲存</button>
+            <button class="btn" onclick="saveSite()">儲存</button>
             <button id="btnDelSite" class="btn btn-danger" style="margin-top:10px; display:none;" onclick="delSite()">刪除</button>
         </div>
     </div>
@@ -515,12 +530,12 @@
                     <input id="exDate" type="date" class="input-f" style="margin-bottom:5px">
                     <input id="exName" class="input-f" placeholder="項目" style="margin-bottom:5px">
                     <input id="exAmt" type="number" class="input-f" placeholder="金額" style="margin-bottom:5px">
-                    <button id="btnAddExtraAction" class="btn btn-success" style="padding:8px; font-size:14px; margin:0;" onclick="saveOneExtra()">加入</button>
+                    <button id="btnAddExtraAction" class="btn" style="padding:8px; font-size:14px; margin:0;" onclick="saveOneExtra()">加入</button>
                 </div>
                 <div id="wExtraList" style="max-height:120px; overflow-y:auto; border:1px solid var(--border); padding:5px;"></div>
             </div>
 
-            <button class="btn btn-success" onclick="saveWorker()">儲存</button>
+            <button class="btn" onclick="saveWorker()">儲存</button>
             <div id="wActionBtns" style="display:none; gap:10px; margin-top:10px;">
                  <button class="btn btn-hide" onclick="toggleHideWorker()" style="margin-top:0">隱藏</button>
                  <button class="btn btn-danger" onclick="hardDeleteWorker()" style="margin-top:0">刪除</button>
@@ -545,7 +560,7 @@
  
             <div id="meList" style="max-height:200px; overflow-y:auto; border:1px solid var(--border); padding:10px; border-radius:10px;"></div>
             
-            <button class="btn btn-success" onclick="saveMultiExtra()">完成</button>
+            <button class="btn" onclick="saveMultiExtra()">完成</button>
         </div>
     </div>
 
@@ -574,41 +589,37 @@
 <script>
 /* --- 系統核心邏輯 --- */
 const THEMES = [
-    { r:86,  g:158, b:138, hex:'#569E8A' }, // Sage Green (類似抹茶)
+    { r:86,  g:158, b:138, hex:'#569E8A' }, // Sage Green
     { r:234, g:193, b:80,  hex:'#EAC150' }, // Mustard Yellow
     { r:90,  g:179, b:194, hex:'#5AB3C2' }, // Sky Blue
     { r:240, g:141, b:166, hex:'#F08DA6' }, // Rose Pink
     { r:157, g:131, b:180, hex:'#9D83B4' }, // Lavender Purple
     { r:224, g:112, b:111, hex:'#E0706F' }, // Coral Red
-    { r:68,  g:98,  b:179, hex:'#4462B3' }  // Royal Blue
+    { r:106, 133, 209,     hex:'#6A85D1' }  // Lighter Royal Blue (原 #4462B3 太深)
 ];
 
 let db = {
     workers: [], sites: [], extras: [], payments: [], 
-    paymentMeta: {}, // { '2026-01': 'note...' }
-    savedPayAmts: {}, // { 'siteIdOrName': 'amount' } -> 儲存請款金額
+    paymentMeta: {}, 
+    savedPayAmts: {}, 
     settings: { theme: 0, gasUrl: '', gasLock: false, darkMode: false }
 };
 
-let editingExtraId = null; // 雜費編輯追蹤
+let editingExtraId = null; 
 let curDate = new Date();
 let selectedDateStr = "";
 
 window.onload = async () => {
-    const local = localStorage.getItem('ENG_LEDGER_FINAL_V4');
+    const local = localStorage.getItem('ENG_LEDGER_FINAL_V5');
     if(local) db = JSON.parse(local);
-    // Backward compatibility for savedPayAmts
     if(!db.savedPayAmts) db.savedPayAmts = {};
     
-    // 初始化外觀
     applyTheme(db.settings.theme);
     if(db.settings.darkMode) toggleDarkMode(true);
     renderPickerWheels();
     updateHeaderDate();
     
-    // 預設頁面渲染
     switchPage('cal'); 
-    
     initGestures();
 
     if(db.settings.gasUrl) {
@@ -620,7 +631,7 @@ window.onload = async () => {
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_FINAL_V4', JSON.stringify(db));
+    localStorage.setItem('ENG_LEDGER_FINAL_V5', JSON.stringify(db));
     syncCloud(false);
 }
 
@@ -884,19 +895,15 @@ function openPaymentModal() {
 
     uniqueNames.forEach(name => {
         const sitesWithName = monthSites.filter(s => s.name === name);
-        // 代表性ID (同名案場視為一體)
         const repId = sitesWithName[0].id;
         
-        // 1. 檢查是否有已確認的 Payment Record
         const existingPay = db.payments.find(p => p.siteId === repId);
         const isPaid = !!existingPay;
         
-        // 2. 決定顯示金額：有 Payment Record 優先，否則用 savedPayAmts
         let displayAmount = '';
         if (existingPay) {
             displayAmount = existingPay.amount || '';
         } else {
-            // 嘗試從記憶中讀取
             displayAmount = db.savedPayAmts[repId] || '';
         }
         
@@ -929,7 +936,6 @@ function openPaymentModal() {
     
     document.getElementById('payTotalDisplay').innerText = `$${totalAmt.toLocaleString()}`;
     
-    // 備註處理
     const noteArea = document.getElementById('payNote');
     noteArea.value = db.paymentMeta && db.paymentMeta[ym] ? db.paymentMeta[ym] : "";
     noteArea.onchange = () => {
@@ -942,18 +948,13 @@ function openPaymentModal() {
 }
 
 function updatePayAmount(repId, val) {
-    // 1. 記憶金額
     db.savedPayAmts[repId] = val;
-    
-    // 2. 如果目前是已請款狀態(Checked)，也要同步更新 Payment Record
     const idx = db.payments.findIndex(p => p.siteId === repId);
     if(idx !== -1) {
         db.payments[idx].amount = val;
     }
-    
     saveDB();
     
-    // 3. 更新總計顯示 (重新計算)
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const monthSites = db.sites.filter(s => s.date.startsWith(ym));
     const monthRepIds = [...new Set(monthSites.map(s=>s.name))].map(n => monthSites.find(s=>s.name===n).id);
@@ -975,7 +976,6 @@ function toggleGroupPay(name, repId, checkbox) {
     }
 
     if(isChecked) {
-        // 從 savedPayAmts 獲取金額，若無則為空
         const amount = db.savedPayAmts[repId] || '';
         if(!db.payments.some(p => p.siteId === repId)) {
             db.payments.push({ siteId: repId, date: new Date().toISOString(), amount: amount });
@@ -1010,14 +1010,9 @@ function renderSiteWorkerSelect(currentWorkers = []) {
     list.innerHTML = "";
     const currentIds = currentWorkers.map(w => w.id);
     
-    // 案場設定名單邏輯：不顯示 "隱藏" (isDisabled=true) 的師傅
-    // 除非該師傅已經在 currentWorkers 裡 (顯示已選的，不管是否隱藏，以免資料顯示錯誤)
-    
-    // 排序：置頂 -> 一般 (隱藏的已排除)
     const sorted = [...db.workers].sort((a,b) => (b.isTop?1:0) - (a.isTop?1:0));
     
     sorted.forEach(w => {
-        // 如果是隱藏狀態，且不再目前的已選名單中，則跳過
         if (w.isDisabled && !currentIds.includes(w.id)) return;
 
         if(w.name.toLowerCase().includes(filter)) {
@@ -1081,7 +1076,6 @@ function renderWorkerList() {
     let totalExp = 0;
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     
-    // 預先計算每個師傅的本月工天，用於排序
     const workersWithStats = db.workers.map(w => {
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let salary = 0;
@@ -1095,18 +1089,9 @@ function renderWorkerList() {
         };
     });
 
-    // 排序邏輯：
-    // 1. 置頂優先 (isTop)
-    // 2. 工天多 > 工天少
-    // 3. 隱藏 (isDisabled) 排最後
     workersWithStats.sort((a,b) => {
-        // 置頂比較
         if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
-        
-        // 隱藏比較 (非隱藏在前)
         if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
-        
-        // 工天比較 (多在前)
         return b.daysCount - a.daysCount;
     });
     
@@ -1190,14 +1175,13 @@ function openWorkerModal(id) {
                 </div>`;
         });
         
-        // 隱藏按鈕文字與狀態
         const btnHide = btnsDiv.children[0];
         if(w.isDisabled) {
             btnHide.innerText = "取消隱藏";
-            btnHide.style.background = "#888"; // 取消狀態改深灰或區分
+            btnHide.className = "btn btn-unhide";
         } else {
             btnHide.innerText = "隱藏";
-            btnHide.style.background = "var(--hide-btn)";
+            btnHide.className = "btn btn-hide";
         }
 
     } else {
@@ -1240,10 +1224,9 @@ function toggleHideWorker() {
     const id = document.getElementById('wId').value;
     const w = db.workers.find(x => x.id === id);
     if(w) {
-        // Toggle Logic
         w.isDisabled = !w.isDisabled;
         if(w.isDisabled) {
-            w.isTop = false; // 隱藏自動解除置頂
+            w.isTop = false; 
         }
         saveDB();
         closeModal('modalWorker');
@@ -1386,7 +1369,7 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V4');
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V5');
     location.reload(); }
 }
 
@@ -1406,12 +1389,9 @@ function switchPage(pid) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('nav-'+pid).classList.add('active');
     
-    // 背景色切換邏輯
     if(pid === 'cal') {
         const t = THEMES[db.settings.theme];
         const themeRgba = `rgba(${t.r},${t.g},${t.b},0.4)`;
-        // 深色模式: 黑底 + 40%主題色
-        // 淺色模式: 白底 + 40%主題色
         const baseColor = db.settings.darkMode ? '#000000' : '#FFFFFF';
         document.body.style.background = `linear-gradient(${themeRgba}, ${themeRgba}), ${baseColor}`;
         
