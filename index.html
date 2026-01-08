@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v5</title>
+    <title>工程帳本 Ultimate Final v6</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -22,10 +22,8 @@
             --border: #EEEEEE;
             --shadow: 0 4px 15px rgba(0,0,0,0.06);
             
-            /* 還原較亮的紅色 */
+            /* 較淺的紅色 (Danger) */
             --danger: #FF6B6B; 
-            /* 隱藏按鈕粉紅/鮭魚色 (維持圖示色系) */
-            --hide-btn: #FF8080; 
             
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
@@ -163,13 +161,13 @@
         .worker-card.disabled { color: var(--text-disabled); border-color: var(--border); }
         .worker-card.disabled b { color: var(--text-disabled); } 
         
-        /* --- 按鈕樣式還原與漸層設定 --- */
+        /* --- 按鈕樣式 (漸層) --- */
         .btn { 
             width: 100%;
             padding: 14px; border: none; border-radius: 14px; 
             font-weight: 700; font-size: 16px; cursor: pointer; color: white; 
             margin-top: 10px;
-            /* 還原為主題色漸層 */
+            /* 預設為主題色漸層 */
             background: linear-gradient(135deg, var(--primary), rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.7));
             box-shadow: 0 4px 12px rgba(var(--theme-r), var(--theme-g), var(--theme-b), 0.3); 
             transition: transform 0.1s, box-shadow 0.2s;
@@ -177,19 +175,19 @@
         .btn:active { transform: scale(0.97);
         }
 
-        /* 刪除按鈕 (Danger) - 還原為較淺的紅色漸層 */
+        /* 刪除按鈕 (Danger) - 淺紅漸層 */
         .btn-danger { 
             background: linear-gradient(135deg, #FF6B6B, #E53935);
             box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3); 
         }
 
-        /* 隱藏按鈕 (Hide - Salmon/Pink) - 改為漸層風格 */
+        /* 隱藏按鈕 (Hide - Pink/Salmon) - 漸層 */
         .btn-hide { 
             background: linear-gradient(135deg, #FF9999, #FF6B6B);
             box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); 
         }
         
-        /* 取消隱藏狀態 - 較深的灰或藍灰漸層 */
+        /* 取消隱藏狀態 - 深灰漸層 */
         .btn-unhide {
             background: linear-gradient(135deg, #78909C, #546E7A);
             box-shadow: 0 4px 12px rgba(84, 110, 122, 0.3);
@@ -266,7 +264,7 @@
         .quick-site-row:active { background: var(--bg-std);
         }
 
-        /* --- 7. 設定 & 主題球 (單排 7 顆) --- */
+        /* --- 7. 設定 & 主題球 --- */
         .theme-grid { 
             display: grid;
             grid-template-columns: repeat(7, 1fr); /* 強制7列 */
@@ -595,7 +593,7 @@ const THEMES = [
     { r:240, g:141, b:166, hex:'#F08DA6' }, // Rose Pink
     { r:157, g:131, b:180, hex:'#9D83B4' }, // Lavender Purple
     { r:224, g:112, b:111, hex:'#E0706F' }, // Coral Red
-    { r:106, 133, 209,     hex:'#6A85D1' }  // Lighter Royal Blue (原 #4462B3 太深)
+    { r:106, g:133, b:209, hex:'#6A85D1' }  // Lighter Royal Blue (修正了這裡的語法錯誤)
 ];
 
 let db = {
@@ -610,7 +608,7 @@ let curDate = new Date();
 let selectedDateStr = "";
 
 window.onload = async () => {
-    const local = localStorage.getItem('ENG_LEDGER_FINAL_V5');
+    const local = localStorage.getItem('ENG_LEDGER_FINAL_V6');
     if(local) db = JSON.parse(local);
     if(!db.savedPayAmts) db.savedPayAmts = {};
     
@@ -631,7 +629,7 @@ window.onload = async () => {
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_FINAL_V5', JSON.stringify(db));
+    localStorage.setItem('ENG_LEDGER_FINAL_V6', JSON.stringify(db));
     syncCloud(false);
 }
 
@@ -1010,9 +1008,21 @@ function renderSiteWorkerSelect(currentWorkers = []) {
     list.innerHTML = "";
     const currentIds = currentWorkers.map(w => w.id);
     
-    const sorted = [...db.workers].sort((a,b) => (b.isTop?1:0) - (a.isTop?1:0));
+    // 計算工天 (與 Personnel 邏輯一致)
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const workersWithStats = db.workers.map(w => {
+        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
+        return { ...w, daysCount: monthSites.length };
+    });
+
+    // 排序：置頂 -> 工天多到少 -> 隱藏
+    workersWithStats.sort((a,b) => {
+        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
+        if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
+        return b.daysCount - a.daysCount;
+    });
     
-    sorted.forEach(w => {
+    workersWithStats.forEach(w => {
         if (w.isDisabled && !currentIds.includes(w.id)) return;
 
         if(w.name.toLowerCase().includes(filter)) {
@@ -1369,7 +1379,7 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V5');
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V6');
     location.reload(); }
 }
 
