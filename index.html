@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v6</title>
+    <title>工程帳本 Ultimate Final v7</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -126,13 +126,13 @@
         .is-weekend { color: var(--danger);
         }
 
-        /* 圓角標籤 (Pill Shape) */
+        /* 修改：圓角方塊 (Rounded Square) */
         .site-tag {
             width: 95%;
             max-width: 100%;
             font-size: 11px; 
             padding: 3px 6px; 
-            border-radius: 50px; 
+            border-radius: 6px; /* 改為較小的圓角，使其看起來更方一點 */
             color: white; margin-bottom: 2px; 
             text-align: center; font-weight: bold; line-height: 1.2;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -593,7 +593,7 @@ const THEMES = [
     { r:240, g:141, b:166, hex:'#F08DA6' }, // Rose Pink
     { r:157, g:131, b:180, hex:'#9D83B4' }, // Lavender Purple
     { r:224, g:112, b:111, hex:'#E0706F' }, // Coral Red
-    { r:106, g:133, b:209, hex:'#6A85D1' }  // Lighter Royal Blue (修正了這裡的語法錯誤)
+    { r:106, g:133, b:209, hex:'#6A85D1' }  // Lighter Royal Blue
 ];
 
 let db = {
@@ -608,7 +608,7 @@ let curDate = new Date();
 let selectedDateStr = "";
 
 window.onload = async () => {
-    const local = localStorage.getItem('ENG_LEDGER_FINAL_V6');
+    const local = localStorage.getItem('ENG_LEDGER_FINAL_V7');
     if(local) db = JSON.parse(local);
     if(!db.savedPayAmts) db.savedPayAmts = {};
     
@@ -629,7 +629,7 @@ window.onload = async () => {
 };
 
 function saveDB() {
-    localStorage.setItem('ENG_LEDGER_FINAL_V6', JSON.stringify(db));
+    localStorage.setItem('ENG_LEDGER_FINAL_V7', JSON.stringify(db));
     syncCloud(false);
 }
 
@@ -1083,10 +1083,10 @@ function renderWorkerList() {
     const list = document.getElementById('workerList');
     list.innerHTML = "";
     
-    let totalExp = 0;
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     
-    const workersWithStats = db.workers.map(w => {
+    // Step 1: 先計算所有師傅的本月薪資 (不受搜尋影響)
+    const allWorkersWithStats = db.workers.map(w => {
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         let salary = 0;
         monthSites.forEach(s => salary += Number(s.workers.find(sw => sw.id === w.id).snapshotRate));
@@ -1099,7 +1099,12 @@ function renderWorkerList() {
         };
     });
 
-    workersWithStats.sort((a,b) => {
+    // 計算總薪資 (Total Expenditure) - 包含所有師傅
+    const grandTotal = allWorkersWithStats.reduce((sum, w) => sum + w.totalPay, 0);
+    document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
+
+    // Step 2: 排序與篩選 (僅影響列表顯示)
+    allWorkersWithStats.sort((a,b) => {
         if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
         if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
         return b.daysCount - a.daysCount;
@@ -1112,12 +1117,10 @@ function renderWorkerList() {
             .flatMap(s => s.workers.map(w => w.id));
     }
     
-    workersWithStats.forEach(w => {
+    allWorkersWithStats.forEach(w => {
         if(wSearch && !w.name.toLowerCase().includes(wSearch)) return;
         if(validWorkerIds && !validWorkerIds.includes(w.id)) return;
 
-        totalExp += w.totalPay;
-        
         const card = document.createElement('div');
         card.className = 'worker-card card';
         if(w.isDisabled) card.classList.add('disabled');
@@ -1133,8 +1136,6 @@ function renderWorkerList() {
         card.onclick = () => openWorkerModal(w.id);
         list.appendChild(card);
     });
-    
-    document.getElementById('totalExp').innerText = `$${totalExp.toLocaleString()}`;
 }
 
 function openWorkerModal(id) {
@@ -1314,11 +1315,27 @@ function renderMeList() {
     const filter = document.getElementById('meFilter').value.toLowerCase();
     const list = document.getElementById('meList');
     list.innerHTML = "";
-    db.workers.forEach(w => {
-        if(w.isDisabled) return; 
+    
+    // 與師傅名單相同的排序邏輯
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const workersWithStats = db.workers.map(w => {
+        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
+        return { ...w, daysCount: monthSites.length };
+    });
+
+    workersWithStats.sort((a,b) => {
+        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
+        if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
+        return b.daysCount - a.daysCount;
+    });
+
+    workersWithStats.forEach(w => {
+        // 不再跳過 isDisabled，改為顯示灰色
         if(w.name.toLowerCase().includes(filter)) {
             const div = document.createElement('div'); div.className = 'chk-row';
-            div.innerHTML = `<span>${w.name}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
+            if(w.isDisabled) div.classList.add('disabled-row');
+            const nameDisplay = w.isDisabled ? `${w.name} (隱藏)` : w.name;
+            div.innerHTML = `<span>${nameDisplay}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
             list.appendChild(div);
         }
     });
@@ -1379,7 +1396,7 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V6');
+    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V7');
     location.reload(); }
 }
 
