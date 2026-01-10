@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v7.8</title>
+    <title>工程帳本 Ultimate Final v7.8.1</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -81,13 +81,15 @@
 
         /* --- 6. Modal --- */
         .modal-box { background: var(--bg-card); width: 88%; max-width: 380px; max-height: 85vh; border-radius: 24px; position: relative; transform: scale(0.95); transition: transform 0.2s; display: flex; flex-direction: column; overflow: hidden; }
-        .modal-box.medium { max-height: 80vh; }
+        .modal-box.medium { max-height: 75vh; }
         .modal-header { padding: 15px 15px 5px 15px; flex-shrink: 0; display: flex; justify-content: flex-end; }
         .modal-content-scroll { padding: 0 24px 24px 24px; overflow-y: auto; flex: 1; }
-        .modal-footer-sticky { padding: 15px 24px; background: var(--bg-card); border-top: 1px solid var(--border); position: sticky; bottom: 0; z-index: 10; }
         .modal-close { width: 30px; height: 30px; display:flex; align-items:center; justify-content:center; background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer; }
         .quick-site-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); cursor: pointer; transition: background 0.1s; }
         .quick-site-row:active { background: var(--bg-std); }
+
+        /* Sticky Footer */
+        .modal-footer-sticky { padding: 15px 24px; background: var(--bg-card); border-top: 1px solid var(--border); position: sticky; bottom: 0; z-index: 10; }
 
         /* --- 7. 設定 & 主題球 --- */
         .theme-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 15px 0; justify-items: center; }
@@ -116,7 +118,6 @@
 
         .chart-container { position: relative; width: 180px; height: 180px; margin: 0 auto 20px auto; }
         .chart-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-weight: bold; font-size: 1.2rem; }
-
     </style>
 </head>
 <body>
@@ -703,18 +704,18 @@ function applySiteFilter() {
 
 function resetDateFilter() {
     document.getElementById('wDateFilter').value = '';
-    updateDateDisplayText(); // [Fix] 調用這個函式來清空顯示
+    updateDateDisplayText();
     renderWorkerList();
 }
 
-function updateDateDisplayText() { // [Fix] 補回此函式
+function updateDateDisplayText() {
     const input = document.getElementById('wDateFilter');
     const display = document.getElementById('dateDisplay');
     if (input.value) display.innerText = input.value;
     else display.innerText = '';
 }
 
-/* --- 金額連動邏輯 --- */
+/* --- [New Feature] 金額連動邏輯 --- */
 let currentFilteredWorkerIds = [];
 
 function renderWorkerList() {
@@ -730,24 +731,34 @@ function renderWorkerList() {
     const hasDateFilter = !!dFilter;
     const hasSiteFilter = siteNames.length > 0;
 
-    // 1. 計算每位師傅的「顯示金額」
+    // 1. 計算每位師傅的「顯示金額」 (根據篩選條件)
     const workersWithDisplayData = db.workers.map(w => {
-        // A. 篩選工資
+        // A. 篩選相關案場 (工資來源)
         let relevantSites = db.sites.filter(s => s.workers.some(sw => sw.id === w.id));
-        if (hasDateFilter) relevantSites = relevantSites.filter(s => s.date === dFilter);
-        else relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
         
-        if (hasSiteFilter) relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
+        if (hasDateFilter) {
+            relevantSites = relevantSites.filter(s => s.date === dFilter);
+        } else {
+            relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
+        }
+        
+        if (hasSiteFilter) {
+            relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
+        }
 
         const displaySalary = relevantSites.reduce((acc, s) => {
             const sw = s.workers.find(x => x.id === w.id);
             return acc + (sw ? Number(sw.snapshotRate) : 0);
         }, 0);
 
-        // B. 篩選雜費
+        // B. 篩選相關雜費 (雜費來源)
         let relevantExtras = db.extras.filter(e => e.wid === w.id);
-        if (hasDateFilter) relevantExtras = relevantExtras.filter(e => e.date === dFilter);
-        else relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
+        
+        if (hasDateFilter) {
+            relevantExtras = relevantExtras.filter(e => e.date === dFilter);
+        } else {
+            relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
+        }
 
         if (hasSiteFilter) {
             relevantExtras = relevantExtras.filter(e => {
@@ -785,7 +796,8 @@ function renderWorkerList() {
             return false;
         }
 
-        // 一般模式：全顯示，讓列表處理隱藏樣式
+        // 一般模式 (本月視圖)：隱藏的人不顯示 (除非被搜尋搜出來，但這裡我們先遵循隱藏設定)
+        // [Fix] 恢復原有的隱藏邏輯：若被隱藏則保留在列表但顯示 (隱藏)
         currentFilteredWorkerIds.push(w.id);
         return true; 
     });
@@ -793,26 +805,27 @@ function renderWorkerList() {
     // 排序
     finalDisplayList.sort((a,b) => {
         if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
-        // [Fix] 隱藏的沈底，但不會消失
+        // [Fix] 隱藏的沈底
         if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
         return b.displayDays - a.displayDays;
     });
 
-    // 計算總支出
+    // 計算總支出 (連動篩選)
     const grandTotal = finalDisplayList.reduce((sum, w) => sum + w.displayPay, 0);
     document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
     
+    // 更新 Cache 供圖表使用
     filteredWorkersCache = finalDisplayList; 
 
-    // 3. 渲染
+    // 3. 渲染卡片
     finalDisplayList.forEach(w => {
         const card = document.createElement('div');
         card.className = 'worker-card card';
-        if(w.isDisabled) card.classList.add('disabled'); // [Fix] 隱藏樣式
+        if(w.isDisabled) card.classList.add('disabled');
         card.style.padding = '15px';
         
         const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ' : '';
-        const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name; // [Fix] 顯示(隱藏)文字
+        const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name;
         
         let tagHtml = '';
         if (hasSiteFilter) {
@@ -839,7 +852,7 @@ function renderWorkerList() {
     });
 }
 
-/* --- 統計圖表 --- */
+/* --- 統計圖表 (使用篩選後的 Cache) --- */
 function openStatsModal() {
     if(filteredWorkersCache.length === 0) return alert("目前無資料");
     
@@ -1140,7 +1153,7 @@ function saveMultiExtra() {
     saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
 }
 
-/* --- 案場請款 --- */
+/* --- 案場請款 (還原回 code7.2) --- */
 function openPaymentModal() {
     const list = document.getElementById('payList');
     list.innerHTML = "";
@@ -1285,11 +1298,11 @@ function toggleGasLock() {
 }
 function masterReset() { if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V7'); location.reload(); } }
 
-/* [Fix] 補回此函式，確保查看日曆功能正常 */
+/* [Fix] 修復查看日曆失效問題 */
 function openPersonalCalendar(wid) {
     if(!wid) return;
     const w = db.workers.find(x => x.id === wid);
-    if(!w) return; // 防呆
+    if(!w) return;
     
     document.getElementById('pcTitle').innerText = `${curDate.getFullYear()}年${curDate.getMonth()+1}月 - ${w.name}`;
     const list = document.getElementById('pcList');
