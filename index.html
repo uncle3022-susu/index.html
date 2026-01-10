@@ -239,6 +239,7 @@
             flex: 1;
         }
         
+        /* 案場篩選的 Sticky Footer */
         .modal-footer-sticky {
             padding: 15px 24px;
             background: var(--bg-card);
@@ -317,13 +318,6 @@
         .p-cal-site { margin-bottom: 4px; }
         .p-cal-extra { color: var(--text-sub); font-size: 0.85rem; margin-top: 2px; }
 
-        /* 統計圖表樣式 */
-        .chart-container { position: relative; width: 180px; height: 180px; margin: 0 auto 20px auto; }
-        .chart-center-text { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            text-align: center; font-weight: bold; font-size: 1.2rem;
-        }
-
     </style>
 </head>
 <body>
@@ -362,7 +356,7 @@
                     <div class="dash-label">案場管理</div>
                     <div class="dash-val">查看</div>
                 </div>
-                <div class="dash-card right" onclick="openStatsModal()">
+                <div class="dash-card right">
                     <div class="dash-label">本月總支出</div>
                     <div class="dash-val" id="totalExp">$0</div>
                 </div>
@@ -379,15 +373,21 @@
                 
                 <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
                     <div style="display:flex; align-items:center; height:50px;">
+                        
                         <label for="wDateFilter" style="display:flex; align-items:center; gap:10px; flex:1; height:100%; cursor:pointer;">
+                            
                             <svg class="icon-svg" style="color:var(--text-sub)" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            
                             <input type="date" id="wDateFilter" 
-                                   style="border:none; background:transparent; padding:0; flex:1; font-size:16px; height:100%; text-align:left; color:var(--text-main); font-family:inherit;" 
+                                   style="border:none; background:transparent; padding:0; flex:1; font-size:16px; height:100%; 
+                                          text-align:left; color:var(--text-main); font-family:inherit;" 
                                    onchange="renderWorkerList()">
                         </label>
+                
                         <div id="btnDateReset" onclick="resetDateFilter()" style="display:none; padding:5px; cursor:pointer; color:var(--text-sub); margin-left:5px;">
                             <svg class="icon-svg-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </div>
+                
                     </div>
                 </div>
                 
@@ -648,24 +648,6 @@
         </div>
     </div>
 
-    <div id="modalStats" class="overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div class="modal-close" onclick="closeModal('modalStats')">
-                    <svg class="icon-svg" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </div>
-            </div>
-            <div class="modal-content-scroll">
-                <h3>本月支出分析</h3>
-                <div id="statsChart" class="chart-container">
-                    <svg viewBox="0 0 36 36" id="donutSvg" style="transform: rotate(-90deg); width:100%; height:100%"></svg>
-                    <div class="chart-center-text" id="chartTotal">$0</div>
-                </div>
-                <div id="statsList" style="margin-top:20px;"></div>
-            </div>
-        </div>
-    </div>
-
     <div id="modalPayment" class="overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -714,8 +696,10 @@ let editingExtraId = null;
 let curDate = new Date();
 let selectedDateStr = "";
 
+// 案場篩選變數 (複選)
 let filterSiteIds = []; 
-let filteredWorkersCache = []; // [Update] 存入每個師傅在「當前篩選條件下」的詳細資料
+// 暫存篩選後的師傅ID列表，供多人雜費使用
+let currentFilteredWorkerIds = [];
 
 window.onload = async () => {
     const local = localStorage.getItem('ENG_LEDGER_FINAL_V7');
@@ -970,9 +954,7 @@ function renderWorkerList() {
         return {
             ...w,
             displayPay: totalDisplayPay, 
-            displayDays: workDays,
-            rawSalary: displaySalary,    
-            rawExtras: relevantExtras    
+            displayDays: workDays
         };
     });
 
@@ -991,7 +973,7 @@ function renderWorkerList() {
             return false;
         }
 
-        // 一般模式 (本月視圖)：遵守隱藏規則
+        // 一般模式：遵守隱藏規則
         if (w.isDisabled) return false;
         
         currentFilteredWorkerIds.push(w.id);
@@ -1008,9 +990,6 @@ function renderWorkerList() {
     // 計算總支出 (連動篩選)
     const grandTotal = finalDisplayList.reduce((sum, w) => sum + w.displayPay, 0);
     document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
-    
-    // 更新 Cache 供圖表使用
-    filteredWorkersCache = finalDisplayList; 
 
     // --- 3. 渲染卡片 ---
     finalDisplayList.forEach(w => {
@@ -1045,91 +1024,6 @@ function renderWorkerList() {
         card.onclick = () => openWorkerModal(w.id);
         list.appendChild(card);
     });
-}
-
-/* --- 統計圖表 (使用篩選後的 Cache) --- */
-function openStatsModal() {
-    if(filteredWorkersCache.length === 0) return alert("目前無資料");
-    
-    // 1. 準備資料
-    let totalSalary = 0;
-    let extraCategories = {}; 
-    
-    filteredWorkersCache.forEach(w => {
-        totalSalary += w.rawSalary;
-        w.rawExtras.forEach(e => {
-            const cat = e.name || '其他';
-            extraCategories[cat] = (extraCategories[cat] || 0) + Number(e.amount);
-        });
-    });
-
-    // 2. 轉換為圓餅圖數據
-    let chartData = [{ label: '薪資', value: totalSalary, color: '#FFB74D' }];
-    const extraColors = ['#4DB6AC', '#BA68C8', '#F06292', '#7986CB', '#90A4AE']; 
-    let colorIdx = 0;
-    
-    Object.keys(extraCategories).forEach(cat => {
-        chartData.push({
-            label: cat,
-            value: extraCategories[cat],
-            color: extraColors[colorIdx % extraColors.length]
-        });
-        colorIdx++;
-    });
-    
-    chartData.sort((a,b) => b.value - a.value);
-    const grandTotal = chartData.reduce((a,b) => a + b.value, 0);
-    document.getElementById('chartTotal').innerText = `$${grandTotal.toLocaleString()}`;
-
-    // 3. 繪製 SVG 圓環圖
-    const svg = document.getElementById('donutSvg');
-    svg.innerHTML = '';
-    let accumulatedPercent = 0;
-    
-    chartData.forEach(d => {
-        const percent = d.value / grandTotal;
-        if(isNaN(percent)) return; 
-        const offset = accumulatedPercent * 100;
-        
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", "18");
-        circle.setAttribute("cy", "18");
-        circle.setAttribute("r", "15.915");
-        circle.setAttribute("fill", "transparent");
-        circle.setAttribute("stroke", d.color);
-        circle.setAttribute("stroke-width", "5");
-        const dashLen = percent * 100;
-        circle.setAttribute("stroke-dasharray", `${dashLen} ${100 - dashLen}`);
-        circle.setAttribute("stroke-dashoffset", -offset);
-        
-        svg.appendChild(circle);
-        accumulatedPercent += percent;
-    });
-
-    // 4. 繪製下方列表
-    const list = document.getElementById('statsList');
-    list.innerHTML = "";
-    
-    filteredWorkersCache.forEach(w => {
-        const exTotal = w.rawExtras.reduce((a,b)=>a+Number(b.amount),0);
-        const row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.9rem;";
-        row.innerHTML = `
-            <div style="flex:1; display:flex; align-items:center;">
-                <div style="width:8px; height:8px; border-radius:50%; background:var(--primary); margin-right:8px;"></div>
-                ${w.name}
-            </div>
-            <div style="text-align:right; color:var(--text-sub); font-size:0.85rem;">
-                薪 $${w.rawSalary.toLocaleString()}
-            </div>
-            <div style="text-align:right; width:80px; font-weight:bold;">
-                雜 $${exTotal.toLocaleString()}
-            </div>
-        `;
-        list.appendChild(row);
-    });
-
-    openModal('modalStats');
 }
 
 /* --- 師傅編輯 & 個人雜費 (Item 7, 8, 10) --- */
@@ -1345,7 +1239,7 @@ function saveMultiExtra() {
     saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
 }
 
-/* --- 案場請款 (還原回 v7.2) --- */
+/* --- 案場請款 (還原回 code7.2 html.txt) --- */
 function openPaymentModal() {
     const list = document.getElementById('payList');
     list.innerHTML = "";
@@ -1448,6 +1342,280 @@ function toggleGroupPay(name, repId, checkbox) {
     saveDB(); openPaymentModal();
 }
 
+/* --- Quick Add / Clone --- */
+function openQuickAdd(dateStr) {
+    selectedDateStr = dateStr;
+    document.getElementById('quickDateTitle').innerText = dateStr;
+    const daySites = db.sites.filter(s => s.date === dateStr);
+    const dayList = document.getElementById('dayExistList');
+    dayList.innerHTML = "";
+    daySites.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'quick-site-row';
+        row.style.background = 'rgba(255, 107, 107, 0.1)'; 
+        row.innerHTML = `<span style="font-weight:bold">${s.name} (${s.workers.length}人)</span> <span style="color:var(--danger);font-weight:bold" onclick="event.stopPropagation();delSite('${s.id}')">刪除</span>`;
+        row.onclick = () => openSiteModal(s.id);
+        dayList.appendChild(row);
+    });
+    const ym = dateStr.slice(0, 7);
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
+    const uniqueMap = new Map();
+    monthSites.forEach(s => uniqueMap.set(s.name, s));
+    const quickList = document.getElementById('quickSiteList');
+    quickList.innerHTML = "";
+    
+    uniqueMap.forEach((s, name) => {
+        const row = document.createElement('div');
+        row.className = 'quick-site-row';
+        const c = THEMES[s.colorIdx || 0].hex;
+        row.innerHTML = `<span style="display:flex;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></div>${name}</span> <span>+</span>`;
+        row.onclick = () => cloneSiteAndEdit(s, dateStr);
+        quickList.appendChild(row);
+    });
+    if(uniqueMap.size === 0) quickList.innerHTML = "<div style='text-align:center;color:var(--text-sub);padding:10px'>本月尚無其他案場</div>";
+    openModal('modalQuickAdd');
+}
+
+function cloneSiteAndEdit(templateSite, targetDate) {
+    const newSite = {
+        id: 's' + Date.now(),
+        date: targetDate,
+        name: templateSite.name,
+        colorIdx: templateSite.colorIdx,
+        workers: [] 
+    };
+    db.sites.push(newSite);
+    saveDB();
+    closeModal('modalQuickAdd');
+    renderCalendar();
+    setTimeout(() => openSiteModal(newSite.id), 200); 
+}
+
+/* --- Modal Helper --- */
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = 'flex';
+    setTimeout(() => m.style.opacity = 1, 10);
+}
+function closeModal(id) {
+    if(!id) document.querySelectorAll('.overlay').forEach(o => { o.style.opacity=0; setTimeout(()=>o.style.display='none',200); });
+    else { const m = document.getElementById(id); m.style.opacity=0; setTimeout(()=>m.style.display='none',200); }
+}
+function switchPage(pid) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-'+pid).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-'+pid).classList.add('active');
+    
+    if(pid === 'cal') {
+        const t = THEMES[db.settings.theme];
+        const themeRgba = `rgba(${t.r},${t.g},${t.b},0.4)`;
+        const baseColor = db.settings.darkMode ? '#000000' : '#FFFFFF';
+        document.body.style.background = `linear-gradient(${themeRgba}, ${themeRgba}), ${baseColor}`;
+        renderCalendar();
+    } else {
+        document.body.style.background = 'var(--bg-std)';
+        if(pid === 'work') renderWorkerList();
+        if(pid === 'set') renderThemeGrid();
+    }
+}
+
+/* --- Picker & Site Edit (Standard) --- */
+function openSiteModal(siteId) {
+    closeModal('modalQuickAdd');
+    openModal('modalSite');
+    const s = siteId ? db.sites.find(x => x.id === siteId) : { id: '', name: '', colorIdx: 0, workers: [] };
+    document.getElementById('sId').value = s.id;
+    document.getElementById('sDate').value = selectedDateStr;
+    document.getElementById('sName').value = s.name;
+    document.getElementById('btnDelSite').style.display = siteId ? 'block' : 'none';
+    renderSiteColorBox(s.colorIdx);
+    renderSiteWorkerSelect(s.workers);
+}
+function saveSite() {
+    const id = document.getElementById('sId').value;
+    const date = document.getElementById('sDate').value;
+    const name = document.getElementById('sName').value;
+    if(!name) return alert("請輸入名稱");
+    const activeDot = document.querySelector('#sColorBox .active');
+    const colorIdx = activeDot ? parseInt(activeDot.dataset.idx) : 0;
+    const chks = document.querySelectorAll('#sWorkerList input:checked');
+    const selectedIds = Array.from(chks).map(c => c.value);
+    
+    const oldSite = id ? db.sites.find(s => s.id === id) : null;
+    const newWorkers = selectedIds.map(wid => {
+        const exist = oldSite?.workers.find(w => w.id === wid);
+        if(exist) return exist; 
+        const master = db.workers.find(w => w.id === wid);
+        return { id: wid, snapshotRate: master ? (Number(master.rate)||0) : 0 };
+    });
+    
+    const clientId = oldSite ? oldSite.clientId : undefined;
+    
+    const data = { id: id || 's'+Date.now(), date, name, colorIdx, workers: newWorkers, clientId };
+    if(id) {
+        const idx = db.sites.findIndex(x => x.id === id);
+        db.sites[idx] = data;
+    } else db.sites.push(data);
+    saveDB(); closeModal('modalSite'); renderCalendar();
+}
+function delSite(id) {
+    if(!id) id = document.getElementById('sId').value;
+    if(confirm('確定刪除？')) {
+        db.sites = db.sites.filter(x => x.id !== id);
+        db.payments = db.payments.filter(p => p.siteId !== id);
+        saveDB(); closeModal(null); renderCalendar();
+    }
+}
+function renderSiteWorkerSelect(currentWorkers = []) {
+    const filter = document.getElementById('sWorkerFilter').value.toLowerCase();
+    const list = document.getElementById('sWorkerList');
+    list.innerHTML = "";
+    const currentIds = currentWorkers.map(w => w.id);
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const workersWithStats = db.workers.map(w => {
+        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
+        const workDays = new Set(monthSites.map(s => s.date)).size;
+        return { ...w, daysCount: workDays };
+    });
+    workersWithStats.sort((a,b) => b.daysCount - a.daysCount);
+    workersWithStats.forEach(w => {
+        if (w.isDisabled && !currentIds.includes(w.id)) return;
+        if(w.name.toLowerCase().includes(filter)) {
+            const row = document.createElement('div');
+            row.className = 'chk-row';
+            if(w.isDisabled) row.classList.add('disabled-row');
+            row.innerHTML = `<span>${w.name}</span> <input type="checkbox" value="${w.id}" ${currentIds.includes(w.id)?'checked':''}>`;
+            list.appendChild(row);
+        }
+    });
+}
+function renderThemeGrid() {
+    const box = document.getElementById('themeBox');
+    box.innerHTML = "";
+    THEMES.forEach((t, i) => {
+        const dot = document.createElement('div');
+        dot.className = `theme-dot ${db.settings.theme === i ? 'active' : ''}`;
+        dot.style.background = t.hex;
+        dot.onclick = () => { 
+            db.settings.theme = i; saveDB(); applyTheme(i); renderThemeGrid(); renderSiteColorBox(); 
+            if(document.getElementById('tab-cal').classList.contains('active')) switchPage('cal');
+        };
+        box.appendChild(dot);
+    });
+}
+function renderSiteColorBox(selectedIdx = 0) {
+    const box = document.getElementById('sColorBox');
+    box.innerHTML = "";
+    THEMES.forEach((t, i) => {
+        const dot = document.createElement('div');
+        dot.className = `theme-dot ${selectedIdx === i ? 'active' : ''}`;
+        dot.style.background = t.hex;
+        dot.dataset.idx = i;
+        dot.onclick = () => { 
+            box.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active')); 
+            dot.classList.add('active'); 
+        };
+        box.appendChild(dot);
+    });
+}
+function applyTheme(i) {
+    const t = THEMES[i] || THEMES[0];
+    const r = document.documentElement.style;
+    r.setProperty('--theme-r', t.r); r.setProperty('--theme-g', t.g);
+    r.setProperty('--theme-b', t.b);
+}
+function renderPickerWheels() {
+    const wy = document.getElementById('wheelY');
+    const wm = document.getElementById('wheelM');
+    if(wy.children.length > 0) return;
+    for(let i=2020; i<=2035; i++) {
+        const div = document.createElement('div');
+        div.className = 'picker-item'; div.innerText = i + '年'; div.dataset.val = i;
+        wy.appendChild(div);
+    }
+    for(let i=1; i<=12; i++) {
+        const div = document.createElement('div');
+        div.className = 'picker-item'; div.innerText = i + '月'; div.dataset.val = i;
+        wm.appendChild(div);
+    }
+    [wy, wm].forEach(el => el.addEventListener('scroll', updatePickerFocus));
+}
+function updatePickerFocus(e) {
+    const el = e.target;
+    const center = el.scrollTop + 110; 
+    let minDiff = Infinity;
+    let closestItem = null;
+    el.querySelectorAll('.picker-item').forEach(it => {
+        const diff = Math.abs(center - (it.offsetTop + it.offsetHeight / 2));
+        if(diff < minDiff) { minDiff = diff; closestItem = it; }
+    });
+    el.querySelectorAll('.picker-item').forEach(it => it.classList.remove('active'));
+    if(closestItem) closestItem.classList.add('active');
+}
+function openDatePicker() {
+    const el = document.getElementById('modalDatePicker');
+    const overlay = document.getElementById('pickerOverlay');
+    el.style.transform = 'translateY(0)';
+    overlay.style.display = 'flex';
+    setTimeout(()=>overlay.style.opacity=1, 10);
+    setTimeout(() => {
+        const wy = document.getElementById('wheelY');
+        const wm = document.getElementById('wheelM');
+        const yItem = [...wy.children].find(c => c.dataset.val == curDate.getFullYear());
+        const mItem = [...wm.children].find(c => c.dataset.val == curDate.getMonth()+1);
+        if(yItem) wy.scrollTop = yItem.offsetTop - 90;
+        if(mItem) wm.scrollTop = mItem.offsetTop - 90;
+    }, 100);
+}
+function closePicker() {
+    const el = document.getElementById('modalDatePicker');
+    const overlay = document.getElementById('pickerOverlay');
+    el.style.transform = 'translateY(100%)';
+    overlay.style.opacity=0;
+    setTimeout(()=>overlay.style.display='none', 200);
+}
+function confirmDate() {
+    const yEl = document.querySelector('#wheelY .active');
+    const mEl = document.querySelector('#wheelM .active');
+    if(yEl && mEl) {
+        curDate.setFullYear(parseInt(yEl.dataset.val));
+        curDate.setMonth(parseInt(mEl.dataset.val)-1);
+        updateHeaderDate();
+        renderCalendar();
+        filterSiteIds = []; 
+        if(document.getElementById('tab-work').classList.contains('active')) renderWorkerList();
+        if(document.getElementById('tab-cal').classList.contains('active')) switchPage('cal');
+    }
+    closePicker();
+}
+function saveWorker() {
+    const id = document.getElementById('wId').value;
+    const name = document.getElementById('wName').value;
+    if(!name) return alert('請輸入姓名');
+    const data = { name, rate: document.getElementById('wRate').value, isTop: document.getElementById('wTop').checked, phone: document.getElementById('wPhone').value, note: document.getElementById('wNote').value };
+    if(id) {
+        const idx = db.workers.findIndex(x => x.id === id);
+        db.workers[idx] = { ...db.workers[idx], ...data };
+    } else {
+        db.workers.push({ id: 'w'+Date.now(), ...data, isDisabled: false });
+    }
+    saveDB(); closeModal('modalWorker'); renderWorkerList();
+}
+function toggleHideWorker() {
+    const id = document.getElementById('wId').value;
+    const w = db.workers.find(x => x.id === id);
+    if(w) { w.isDisabled = !w.isDisabled; if(w.isDisabled) w.isTop = false; saveDB(); closeModal('modalWorker'); renderWorkerList(); }
+}
+function hardDeleteWorker() {
+    if(confirm('警告：確定刪除？')) {
+        const id = document.getElementById('wId').value;
+        db.workers = db.workers.filter(x => x.id !== id);
+        db.sites.forEach(s => s.workers = s.workers.filter(sw => sw.id !== id));
+        db.extras = db.extras.filter(e => e.wid !== id);
+        saveDB(); closeModal('modalWorker'); renderWorkerList();
+    }
+}
 function toggleAddExtra() {
     const box = document.getElementById('addExtraBox');
     const isHidden = box.style.display === 'none';
