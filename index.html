@@ -727,7 +727,7 @@ let curDate = new Date();
 let selectedDateStr = "";
 
 let filterSiteIds = []; 
-let filteredWorkersCache = []; // 存入每個師傅在「當前篩選條件下」的金額
+let filteredWorkersCache = []; // [Update] 存入每個師傅在「當前篩選條件下」的詳細資料
 
 window.onload = async () => {
     const local = localStorage.getItem('ENG_LEDGER_FINAL_V7');
@@ -938,7 +938,7 @@ function updateDateDisplayText() {
 function renderWorkerList() {
     const wSearch = document.getElementById('wSearch').value.toLowerCase();
     const dFilter = document.getElementById('wDateFilter').value; // 日期 (例如 "2026-01-07")
-    const siteNames = filterSiteIds; // 案場名稱陣列 (例如 ["案場A", "案場B"])
+    const siteNames = filterSiteIds; // 案場名稱陣列
     
     document.getElementById('btnDateReset').style.display = dFilter ? 'block' : 'none';
     const list = document.getElementById('workerList');
@@ -948,90 +948,66 @@ function renderWorkerList() {
     const hasDateFilter = !!dFilter;
     const hasSiteFilter = siteNames.length > 0;
 
-    // --- 計算每位師傅的「顯示金額」 (根據篩選條件) ---
+    // --- 1. 計算每位師傅的「顯示金額」 (根據篩選條件) ---
     const workersWithDisplayData = db.workers.map(w => {
-        // 1. 篩選相關案場 (工資來源)
-        let relevantSites = db.sites.filter(s => s.workers.some(sw => sw.id === w.id));
+        // A. 篩選相關案場 (工資來源)
+        let relevantSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
         
-        // 日期過濾
         if (hasDateFilter) {
             relevantSites = relevantSites.filter(s => s.date === dFilter);
-        } else {
-            relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
         }
-        
-        // 案場名稱過濾
         if (hasSiteFilter) {
             relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
         }
 
-        // 計算工資
         const displaySalary = relevantSites.reduce((acc, s) => {
             const sw = s.workers.find(x => x.id === w.id);
             return acc + (sw ? Number(sw.snapshotRate) : 0);
         }, 0);
 
-        // 2. 篩選相關雜費 (雜費來源)
-        let relevantExtras = db.extras.filter(e => e.wid === w.id);
+        // B. 篩選相關雜費 (雜費來源)
+        let relevantExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
         
-        // 日期過濾
         if (hasDateFilter) {
             relevantExtras = relevantExtras.filter(e => e.date === dFilter);
-        } else {
-            relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
         }
-
-        // 案場過濾 (雜費需有 siteId 且該 site 對應的名稱在篩選清單內)
         if (hasSiteFilter) {
+            // [Requirement] "wages and extras for workdays in that site"
             relevantExtras = relevantExtras.filter(e => {
-                if (!e.siteId) return false; // 沒選案場的雜費，在篩選案場模式下不顯示
+                if (!e.siteId) return false;
                 const linkedSite = db.sites.find(s => s.id === e.siteId);
                 return linkedSite && siteNames.includes(linkedSite.name);
             });
         }
 
-        // 計算雜費
         const displayExtrasAmt = relevantExtras.reduce((acc, e) => acc + Number(e.amount), 0);
-
         const totalDisplayPay = displaySalary + displayExtrasAmt;
-        const workDays = new Set(relevantSites.map(s => s.date)).size; // 顯示的工作天數也隨篩選變動
+        const workDays = new Set(relevantSites.map(s => s.date)).size;
 
         return {
             ...w,
             displayPay: totalDisplayPay, // 這是要顯示在紅框的金額
             displayDays: workDays,
             rawSalary: displaySalary,    // 供圖表使用
-            rawExtras: relevantExtras    // 供圖表使用 (保留完整物件)
+            rawExtras: relevantExtras    // 供圖表使用
         };
     });
 
-    // --- 決定顯示哪些師傅 ---
+    // --- 2. 決定顯示哪些師傅 ---
     // 邏輯: 
-    // 1. 如果有搜尋文字 -> 依文字
-    // 2. 如果有篩選器 (日期或案場) -> 只顯示「金額 > 0」的人 (代表在該條件下有參與)
-    // 3. 如果無任何篩選 -> 顯示本月所有人 (含隱藏邏輯)
+    // - 有篩選器時 -> 只顯示有金額或有工時的人 (代表在該條件下有參與)
+    // - 無篩選器時 -> 顯示本月所有人 (遵守隱藏屬性)
     
     let finalDisplayList = workersWithDisplayData.filter(w => {
-        // 文字搜尋優先
-        if (wSearch) {
-            return w.name.toLowerCase().includes(wSearch);
-        }
+        if (wSearch && !w.name.toLowerCase().includes(wSearch)) return false;
         
-        // 若有篩選器，只顯示有金額的人 (或工作天>0，避免有工無薪的極端狀況)
         if (hasDateFilter || hasSiteFilter) {
-            if (w.displayPay === 0 && w.displayDays === 0) return false;
-            // 篩選模式下通常顯示所有人(含隱藏)，或者仍遵守隱藏規則？
-            // 照慣例，篩選特定日期通常想看「當天有誰」，所以隱藏屬性暫時忽略，或者保留？
-            // 這裡保留隱藏屬性生效：如果被隱藏，除非金額>0且我們強制要看？
-            // 簡單邏輯：篩選模式下，只要有錢就顯示。
-            return true;
+            // 篩選模式：只顯示有錢或有工的人
+            return w.displayPay > 0 || w.displayDays > 0;
         }
 
-        // 無篩選模式 (預設本月視圖)
-        // 隱藏的人不顯示
+        // 一般模式：隱藏的人不顯示 (除非被搜尋搜出來?) 原邏輯是隱藏就不顯示
         if (w.isDisabled) return false;
-        // 金額為0且無天數的(本月沒做) -> 依需求決定是否顯示，這裡假設只顯示有參與的，或者全部
-        // 原本邏輯是顯示全部非隱藏。
         return true; 
     });
 
@@ -1042,14 +1018,14 @@ function renderWorkerList() {
         return b.displayDays - a.displayDays;
     });
 
-    // 計算總支出 (上方卡片)
+    // 計算總支出 (上方卡片) -> 連動篩選結果
     const grandTotal = finalDisplayList.reduce((sum, w) => sum + w.displayPay, 0);
     document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
     
     // 更新 Cache 供圖表使用
     filteredWorkersCache = finalDisplayList; 
 
-    // --- 渲染卡片 ---
+    // --- 3. 渲染卡片 ---
     finalDisplayList.forEach(w => {
         const card = document.createElement('div');
         card.className = 'worker-card card';
@@ -1059,7 +1035,7 @@ function renderWorkerList() {
         const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ' : '';
         const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name;
         
-        // 標籤 (顯示這個師傅在篩選條件下參與的案場)
+        // 標籤顯示
         let tagHtml = '';
         if (hasSiteFilter) {
             // 只顯示篩選器中有選的案場
@@ -1071,7 +1047,6 @@ function renderWorkerList() {
             );
             const uniqueNames = [...new Set(relevantSites.map(s => s.name))];
             uniqueNames.forEach(name => {
-                // 找顏色
                 const siteObj = relevantSites.find(s => s.name === name);
                 const c = THEMES[siteObj.colorIdx||0].hex;
                 tagHtml += `<span style="font-size:0.75rem; background:${c}; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;">${name}</span>`;
@@ -1091,7 +1066,7 @@ function renderWorkerList() {
 function openStatsModal() {
     if(filteredWorkersCache.length === 0) return alert("目前無資料");
     
-    // 1. 準備資料
+    // 1. 準備資料 (使用 Cache 中的 rawSalary / rawExtras)
     let totalSalary = 0;
     let extraCategories = {}; 
     
@@ -1105,7 +1080,6 @@ function openStatsModal() {
 
     // 2. 轉換為圓餅圖數據
     let chartData = [{ label: '薪資', value: totalSalary, color: '#FFB74D' }];
-    
     const extraColors = ['#4DB6AC', '#BA68C8', '#F06292', '#7986CB', '#90A4AE']; 
     let colorIdx = 0;
     
@@ -1129,7 +1103,7 @@ function openStatsModal() {
     
     chartData.forEach(d => {
         const percent = d.value / grandTotal;
-        if(isNaN(percent)) return; // 防呆
+        if(isNaN(percent)) return; 
         const offset = accumulatedPercent * 100;
         
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -1152,9 +1126,7 @@ function openStatsModal() {
     list.innerHTML = "";
     
     filteredWorkersCache.forEach(w => {
-        // 計算該師傅在當前篩選條件下的雜費總額
         const exTotal = w.rawExtras.reduce((a,b)=>a+Number(b.amount),0);
-        
         const row = document.createElement('div');
         row.style.cssText = "display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.9rem;";
         row.innerHTML = `
@@ -1288,9 +1260,11 @@ function renderMeList() {
     let sourceWorkers = (filteredWorkersCache.length > 0) ? filteredWorkersCache : db.workers;
     
     sourceWorkers.forEach(w => {
-        if(w.name.toLowerCase().includes(filter)) {
+        // 如果是 display object，w.worker 才是原始資料；如果是 db.workers，w 就是原始資料
+        const worker = w.worker || w;
+        if(worker.name.toLowerCase().includes(filter)) {
             const div = document.createElement('div'); div.className = 'chk-row';
-            div.innerHTML = `<span>${w.name}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
+            div.innerHTML = `<span>${worker.name}</span> <input type="checkbox" class="me-chk" value="${worker.id}">`;
             list.appendChild(div);
         }
     });
@@ -1467,7 +1441,7 @@ function cloneSiteAndEdit(templateSite, targetDate) {
         date: targetDate,
         name: templateSite.name,
         colorIdx: templateSite.colorIdx,
-        workers: [] // Reset workers
+        workers: [] 
     };
     db.sites.push(newSite);
     saveDB();
