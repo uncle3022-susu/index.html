@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v7.3</title>
+    <title>工程帳本 Ultimate Final v7.4</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -226,10 +226,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        /* [Request 5] 中型 Modal (日曆/雜費細項) */
-        .modal-box.medium {
-            max-height: 75vh; 
-        }
+        .modal-box.medium { max-height: 80vh; }
 
         .modal-header {
             padding: 15px 15px 5px 15px;
@@ -242,7 +239,6 @@
             flex: 1;
         }
         
-        /* [New Feature] Sticky Footer inside Modal for Site Select */
         .modal-footer-sticky {
             padding: 15px 24px;
             background: var(--bg-card);
@@ -253,8 +249,7 @@
         }
 
         .modal-close { 
-            width: 30px;
-            height: 30px; 
+            width: 30px; height: 30px; 
             display:flex; align-items:center; justify-content:center; 
             background: var(--bg-std); border-radius:50%; color: var(--text-sub); cursor:pointer;
         }
@@ -316,18 +311,30 @@
         }
         
         /* 個人日曆樣式 */
-        .p-cal-row {
-            display: flex;
-            gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border);
-        }
-        .p-cal-date {
-            width: 50px;
-            font-weight: bold; text-align: center;
-            display: flex; flex-direction: column; align-items: center;
-        }
+        .p-cal-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .p-cal-date { width: 50px; font-weight: bold; text-align: center; display: flex; flex-direction: column; align-items: center; }
         .p-cal-content { flex: 1; font-size: 0.9rem; }
         .p-cal-site { margin-bottom: 4px; }
         .p-cal-extra { color: var(--text-sub); font-size: 0.85rem; margin-top: 2px; }
+
+        /* 統計圖表樣式 */
+        .chart-container { position: relative; width: 180px; height: 180px; margin: 0 auto 20px auto; }
+        .chart-center-text { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            text-align: center; font-weight: bold; font-size: 1.2rem;
+        }
+        
+        /* 案場請款拖曳樣式 */
+        .client-group { background: var(--bg-std); border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px solid var(--border); }
+        .client-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+        .pay-site-item { 
+            background: var(--bg-card); padding: 10px; border-radius: 8px; margin-bottom: 8px; 
+            border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            display: flex; justify-content: space-between; align-items: center; cursor: grab;
+        }
+        .pay-site-item:active { cursor: grabbing; opacity: 0.8; transform: scale(0.99); }
+        .pay-site-left { flex: 1; }
+        .pay-site-amt { display: flex; align-items: center; gap: 8px; }
 
     </style>
 </head>
@@ -367,8 +374,8 @@
                     <div class="dash-label">案場管理</div>
                     <div class="dash-val">查看</div>
                 </div>
-                <div class="dash-card right">
-                    <div class="dash-label">本月總薪資</div>
+                <div class="dash-card right" onclick="openStatsModal()">
+                    <div class="dash-label">本月總支出</div>
                     <div class="dash-val" id="totalExp">$0</div>
                 </div>
             </div>
@@ -386,9 +393,7 @@
                     <div style="display:flex; align-items:center; height:50px;">
                         
                         <label for="wDateFilter" style="display:flex; align-items:center; gap:10px; flex:1; height:100%; cursor:pointer;">
-                            
                             <svg class="icon-svg" style="color:var(--text-sub)" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            
                             <input type="date" id="wDateFilter" 
                                    style="border:none; background:transparent; padding:0; flex:1; font-size:16px; height:100%; 
                                           text-align:left; color:var(--text-main); font-family:inherit;" 
@@ -398,7 +403,6 @@
                         <div id="btnDateReset" onclick="resetDateFilter()" style="display:none; padding:5px; cursor:pointer; color:var(--text-sub); margin-left:5px;">
                             <svg class="icon-svg-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </div>
-                
                     </div>
                 </div>
                 
@@ -566,13 +570,10 @@
                     </div>
                     <div id="addExtraBox" style="display:none; background:rgba(var(--theme-r),var(--theme-g),var(--theme-b),0.1); padding:10px; border-radius:8px; margin-bottom:10px;">
                         <input id="exDate" type="date" class="input-f" style="margin-bottom:5px" onchange="renderExtraSiteSelect('exDate', 'exSite')">
-                        
                         <select id="exSite" class="input-f" style="margin-bottom:5px; padding:12px;">
                             <option value="">選擇案場 (選填)</option>
                         </select>
-
                         <input id="exName" list="expenseOptions" class="input-f" placeholder="項目 (可輸入或選擇)" style="margin-bottom:5px">
-                        
                         <input id="exAmt" type="number" class="input-f" placeholder="金額" style="margin-bottom:5px">
                         <button id="btnAddExtraAction" class="btn" style="padding:8px; font-size:14px; margin:0;" onclick="saveOneExtra()">加入</button>
                     </div>
@@ -645,11 +646,9 @@
             <div class="modal-content-scroll">
                 <h3>多人添加雜費</h3>
                 <input id="meDate" type="date" class="input-f" onchange="renderExtraSiteSelect('meDate', 'meSite')">
-                
                 <select id="meSite" class="input-f" style="margin-bottom:12px; padding:12px;">
                     <option value="">選擇案場 (選填)</option>
                 </select>
-
                 <input id="meName" list="expenseOptions" class="input-f" placeholder="項目 (可輸入或選擇)">
                 <input id="meAmt" type="number" class="input-f" placeholder="金額">
                 
@@ -664,6 +663,24 @@
         </div>
     </div>
 
+    <div id="modalStats" class="overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-close" onclick="closeModal('modalStats')">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="modal-content-scroll">
+                <h3>本月支出分析</h3>
+                <div id="statsChart" class="chart-container">
+                    <svg viewBox="0 0 36 36" id="donutSvg" style="transform: rotate(-90deg); width:100%; height:100%"></svg>
+                    <div class="chart-center-text" id="chartTotal">$0</div>
+                </div>
+                <div id="statsList" style="margin-top:20px;"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="modalPayment" class="overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -672,19 +689,15 @@
                  </div>
             </div>
             <div class="modal-content-scroll">
-                <h3>案場請款管理</h3>
-                <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">* 同名稱案場自動合併</div>
-                
-                <div id="payList" style="max-height:280px; overflow-y:auto; margin-bottom:10px;"></div>
-                
-                <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:5px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-weight:bold; font-size:1.1rem;">
-                        <span>本月請款總計:</span>
-                        <span id="payTotalDisplay">$0</span>
-                    </div>
-                    <textarea id="payNote" class="input-f" style="height:60px;" placeholder="本月請款備註..."></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>案場請款管理</h3>
+                    <button class="btn-ghost" style="padding:5px 10px; font-size:12px; margin:0;" onclick="addClient()">+ 新增案主</button>
                 </div>
-
+                
+                <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px;">* 長按案場可拖曳排序或換案主</div>
+                
+                <div id="payContainer" style="margin-bottom:10px;"></div>
+                
                 <button class="btn" onclick="closeModal('modalPayment')">關閉</button>
             </div>
         </div>
@@ -693,17 +706,18 @@
 <script>
 /* --- 系統核心邏輯 --- */
 const THEMES = [
-    { r:86,  g:158, b:138, hex:'#569E8A' }, // Sage Green
-    { r:234, g:193, b:80,  hex:'#EAC150' }, // Mustard Yellow
-    { r:90,  g:179, b:194, hex:'#5AB3C2' }, // Sky Blue
-    { r:240, g:141, b:166, hex:'#F08DA6' }, // Rose Pink
-    { r:157, g:131, b:180, hex:'#9D83B4' }, // Lavender Purple
-    { r:224, g:112, b:111, hex:'#E0706F' }, // Coral Red
-    { r:106, g:133, b:209, hex:'#6A85D1' }  // Lighter Royal Blue
+    { r:86,  g:158, b:138, hex:'#569E8A' }, 
+    { r:234, g:193, b:80,  hex:'#EAC150' }, 
+    { r:90,  g:179, b:194, hex:'#5AB3C2' }, 
+    { r:240, g:141, b:166, hex:'#F08DA6' }, 
+    { r:157, g:131, b:180, hex:'#9D83B4' }, 
+    { r:224, g:112, b:111, hex:'#E0706F' }, 
+    { r:106, g:133, b:209, hex:'#6A85D1' }
 ];
 
 let db = {
     workers: [], sites: [], extras: [], payments: [], 
+    clients: [], 
     paymentMeta: {}, 
     savedPayAmts: {}, 
     settings: { theme: 0, gasUrl: '', gasLock: false, darkMode: false }
@@ -712,15 +726,14 @@ let editingExtraId = null;
 let curDate = new Date();
 let selectedDateStr = "";
 
-// [Modification] 改為複選陣列
 let filterSiteIds = []; 
-// 暫存篩選後的師傅ID列表，供多人雜費使用 (Requirement 9)
-let currentFilteredWorkerIds = [];
+let filteredWorkersCache = []; // 存入每個師傅在「當前篩選條件下」的金額
 
 window.onload = async () => {
     const local = localStorage.getItem('ENG_LEDGER_FINAL_V7');
     if(local) db = JSON.parse(local);
     if(!db.savedPayAmts) db.savedPayAmts = {};
+    if(!db.clients) db.clients = [];
     
     applyTheme(db.settings.theme);
     if(db.settings.darkMode) toggleDarkMode(true);
@@ -755,6 +768,7 @@ async function syncCloud(isPull) {
             if(data.workers) { 
                 db = data;
                 if(!db.savedPayAmts) db.savedPayAmts = {};
+                if(!db.clients) db.clients = [];
                 renderAll();
             }
         } else {
@@ -771,10 +785,9 @@ function renderAll() {
     renderSiteColorBox();
 }
 
-/* --- 深色模式 --- */
+/* --- 深色模式 & 手勢 --- */
 function toggleDarkMode(forceState) {
     const isDark = typeof forceState === 'boolean' ? forceState : !document.body.hasAttribute('data-mode');
-    
     if (isDark) {
         document.body.setAttribute('data-mode', 'dark');
         document.getElementById('iconMoon').style.display = 'none';
@@ -784,17 +797,13 @@ function toggleDarkMode(forceState) {
         document.getElementById('iconMoon').style.display = 'block';
         document.getElementById('iconSun').style.display = 'none';
     }
-    
     db.settings.darkMode = isDark;
     if(typeof forceState !== 'boolean') {
         saveDB();
-        if(document.getElementById('tab-cal').classList.contains('active')) {
-             switchPage('cal');
-        }
+        if(document.getElementById('tab-cal').classList.contains('active')) switchPage('cal');
     }
 }
 
-/* --- 手勢 (Swipe) --- */
 function initGestures() {
     const cal = document.getElementById('calWrapper');
     let startX = 0;
@@ -850,7 +859,6 @@ function renderCalendar() {
         cell.onclick = () => openQuickAdd(dateStr);
         grid.appendChild(cell);
     }
-    
     setTimeout(resizeTags, 10);
 }
 
@@ -865,7 +873,561 @@ function resizeTags() {
     });
 }
 
-/* --- Quick Add Logic --- */
+/* --- 案場篩選 Modal --- */
+function openSiteSelect() {
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
+    const uniqueMap = new Map(); 
+    monthSites.forEach(s => uniqueMap.set(s.name, s));
+    
+    const list = document.getElementById('ssList');
+    list.innerHTML = "";
+    
+    if(uniqueMap.size === 0) {
+        list.innerHTML = "<div style='text-align:center;color:var(--text-sub);padding:10px'>本月尚無案場</div>";
+    } else {
+        const resetItem = document.createElement('div');
+        resetItem.className = 'quick-site-row';
+        resetItem.innerHTML = `<span style="color:var(--text-sub)">不篩選 (顯示全部)</span>`;
+        resetItem.onclick = () => { 
+            filterSiteIds = []; 
+            closeModal('modalSiteSelect'); 
+            renderWorkerList(); 
+        };
+        list.appendChild(resetItem);
+
+        uniqueMap.forEach((repSite, name) => {
+            const div = document.createElement('div');
+            div.className = 'chk-row';
+            const c = THEMES[repSite.colorIdx||0].hex;
+            const isChecked = filterSiteIds.includes(name); 
+            div.innerHTML = `
+                <span style="display:flex;align-items:center">
+                    <div style="width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></div>
+                    ${name}
+                </span>
+                <input type="checkbox" value="${name}" ${isChecked?'checked':''}>
+            `;
+            list.appendChild(div);
+        });
+    }
+    openModal('modalSiteSelect');
+}
+
+function applySiteFilter() {
+    const chks = document.querySelectorAll('#ssList input:checked');
+    filterSiteIds = Array.from(chks).map(c => c.value); 
+    closeModal('modalSiteSelect');
+    renderWorkerList();
+}
+
+function resetDateFilter() {
+    document.getElementById('wDateFilter').value = '';
+    updateDateDisplayText();
+    renderWorkerList();
+}
+
+function updateDateDisplayText() {
+    const input = document.getElementById('wDateFilter');
+    const display = document.getElementById('dateDisplay');
+    if (input.value) display.innerText = input.value;
+    else display.innerText = '';
+}
+
+/* --- [Update] 師傅列表與邏輯 (紅框部分連動修改) --- */
+function renderWorkerList() {
+    const wSearch = document.getElementById('wSearch').value.toLowerCase();
+    const dFilter = document.getElementById('wDateFilter').value; // 日期 (例如 "2026-01-07")
+    const siteNames = filterSiteIds; // 案場名稱陣列 (例如 ["案場A", "案場B"])
+    
+    document.getElementById('btnDateReset').style.display = dFilter ? 'block' : 'none';
+    const list = document.getElementById('workerList');
+    list.innerHTML = "";
+    
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const hasDateFilter = !!dFilter;
+    const hasSiteFilter = siteNames.length > 0;
+
+    // --- 計算每位師傅的「顯示金額」 (根據篩選條件) ---
+    const workersWithDisplayData = db.workers.map(w => {
+        // 1. 篩選相關案場 (工資來源)
+        let relevantSites = db.sites.filter(s => s.workers.some(sw => sw.id === w.id));
+        
+        // 日期過濾
+        if (hasDateFilter) {
+            relevantSites = relevantSites.filter(s => s.date === dFilter);
+        } else {
+            relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
+        }
+        
+        // 案場名稱過濾
+        if (hasSiteFilter) {
+            relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
+        }
+
+        // 計算工資
+        const displaySalary = relevantSites.reduce((acc, s) => {
+            const sw = s.workers.find(x => x.id === w.id);
+            return acc + (sw ? Number(sw.snapshotRate) : 0);
+        }, 0);
+
+        // 2. 篩選相關雜費 (雜費來源)
+        let relevantExtras = db.extras.filter(e => e.wid === w.id);
+        
+        // 日期過濾
+        if (hasDateFilter) {
+            relevantExtras = relevantExtras.filter(e => e.date === dFilter);
+        } else {
+            relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
+        }
+
+        // 案場過濾 (雜費需有 siteId 且該 site 對應的名稱在篩選清單內)
+        if (hasSiteFilter) {
+            relevantExtras = relevantExtras.filter(e => {
+                if (!e.siteId) return false; // 沒選案場的雜費，在篩選案場模式下不顯示
+                const linkedSite = db.sites.find(s => s.id === e.siteId);
+                return linkedSite && siteNames.includes(linkedSite.name);
+            });
+        }
+
+        // 計算雜費
+        const displayExtrasAmt = relevantExtras.reduce((acc, e) => acc + Number(e.amount), 0);
+
+        const totalDisplayPay = displaySalary + displayExtrasAmt;
+        const workDays = new Set(relevantSites.map(s => s.date)).size; // 顯示的工作天數也隨篩選變動
+
+        return {
+            ...w,
+            displayPay: totalDisplayPay, // 這是要顯示在紅框的金額
+            displayDays: workDays,
+            rawSalary: displaySalary,    // 供圖表使用
+            rawExtras: relevantExtras    // 供圖表使用 (保留完整物件)
+        };
+    });
+
+    // --- 決定顯示哪些師傅 ---
+    // 邏輯: 
+    // 1. 如果有搜尋文字 -> 依文字
+    // 2. 如果有篩選器 (日期或案場) -> 只顯示「金額 > 0」的人 (代表在該條件下有參與)
+    // 3. 如果無任何篩選 -> 顯示本月所有人 (含隱藏邏輯)
+    
+    let finalDisplayList = workersWithDisplayData.filter(w => {
+        // 文字搜尋優先
+        if (wSearch) {
+            return w.name.toLowerCase().includes(wSearch);
+        }
+        
+        // 若有篩選器，只顯示有金額的人 (或工作天>0，避免有工無薪的極端狀況)
+        if (hasDateFilter || hasSiteFilter) {
+            if (w.displayPay === 0 && w.displayDays === 0) return false;
+            // 篩選模式下通常顯示所有人(含隱藏)，或者仍遵守隱藏規則？
+            // 照慣例，篩選特定日期通常想看「當天有誰」，所以隱藏屬性暫時忽略，或者保留？
+            // 這裡保留隱藏屬性生效：如果被隱藏，除非金額>0且我們強制要看？
+            // 簡單邏輯：篩選模式下，只要有錢就顯示。
+            return true;
+        }
+
+        // 無篩選模式 (預設本月視圖)
+        // 隱藏的人不顯示
+        if (w.isDisabled) return false;
+        // 金額為0且無天數的(本月沒做) -> 依需求決定是否顯示，這裡假設只顯示有參與的，或者全部
+        // 原本邏輯是顯示全部非隱藏。
+        return true; 
+    });
+
+    // 排序
+    finalDisplayList.sort((a,b) => {
+        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
+        if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
+        return b.displayDays - a.displayDays;
+    });
+
+    // 計算總支出 (上方卡片)
+    const grandTotal = finalDisplayList.reduce((sum, w) => sum + w.displayPay, 0);
+    document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
+    
+    // 更新 Cache 供圖表使用
+    filteredWorkersCache = finalDisplayList; 
+
+    // --- 渲染卡片 ---
+    finalDisplayList.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'worker-card card';
+        if(w.isDisabled) card.classList.add('disabled');
+        card.style.padding = '15px';
+        
+        const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ' : '';
+        const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name;
+        
+        // 標籤 (顯示這個師傅在篩選條件下參與的案場)
+        let tagHtml = '';
+        if (hasSiteFilter) {
+            // 只顯示篩選器中有選的案場
+            const relevantSites = db.sites.filter(s => 
+                s.date.startsWith(ym) && 
+                siteNames.includes(s.name) && 
+                s.workers.some(sw => sw.id === w.id) &&
+                (!hasDateFilter || s.date === dFilter)
+            );
+            const uniqueNames = [...new Set(relevantSites.map(s => s.name))];
+            uniqueNames.forEach(name => {
+                // 找顏色
+                const siteObj = relevantSites.find(s => s.name === name);
+                const c = THEMES[siteObj.colorIdx||0].hex;
+                tagHtml += `<span style="font-size:0.75rem; background:${c}; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;">${name}</span>`;
+            });
+        }
+
+        card.innerHTML = `
+            <div><b>${star}${nameText}${tagHtml}</b><div style="font-size:0.85rem;color:var(--text-sub);margin-top:4px">${w.displayDays} 天上工</div></div>
+            <div style="font-size:1.2rem;font-weight:800">$${w.displayPay.toLocaleString()}</div>
+        `;
+        card.onclick = () => openWorkerModal(w.id);
+        list.appendChild(card);
+    });
+}
+
+/* --- 統計圖表 (使用篩選後的 Cache) --- */
+function openStatsModal() {
+    if(filteredWorkersCache.length === 0) return alert("目前無資料");
+    
+    // 1. 準備資料
+    let totalSalary = 0;
+    let extraCategories = {}; 
+    
+    filteredWorkersCache.forEach(w => {
+        totalSalary += w.rawSalary;
+        w.rawExtras.forEach(e => {
+            const cat = e.name || '其他';
+            extraCategories[cat] = (extraCategories[cat] || 0) + Number(e.amount);
+        });
+    });
+
+    // 2. 轉換為圓餅圖數據
+    let chartData = [{ label: '薪資', value: totalSalary, color: '#FFB74D' }];
+    
+    const extraColors = ['#4DB6AC', '#BA68C8', '#F06292', '#7986CB', '#90A4AE']; 
+    let colorIdx = 0;
+    
+    Object.keys(extraCategories).forEach(cat => {
+        chartData.push({
+            label: cat,
+            value: extraCategories[cat],
+            color: extraColors[colorIdx % extraColors.length]
+        });
+        colorIdx++;
+    });
+    
+    chartData.sort((a,b) => b.value - a.value);
+    const grandTotal = chartData.reduce((a,b) => a + b.value, 0);
+    document.getElementById('chartTotal').innerText = `$${grandTotal.toLocaleString()}`;
+
+    // 3. 繪製 SVG 圓環圖
+    const svg = document.getElementById('donutSvg');
+    svg.innerHTML = '';
+    let accumulatedPercent = 0;
+    
+    chartData.forEach(d => {
+        const percent = d.value / grandTotal;
+        if(isNaN(percent)) return; // 防呆
+        const offset = accumulatedPercent * 100;
+        
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", "18");
+        circle.setAttribute("cy", "18");
+        circle.setAttribute("r", "15.915");
+        circle.setAttribute("fill", "transparent");
+        circle.setAttribute("stroke", d.color);
+        circle.setAttribute("stroke-width", "5");
+        const dashLen = percent * 100;
+        circle.setAttribute("stroke-dasharray", `${dashLen} ${100 - dashLen}`);
+        circle.setAttribute("stroke-dashoffset", -offset);
+        
+        svg.appendChild(circle);
+        accumulatedPercent += percent;
+    });
+
+    // 4. 繪製下方列表
+    const list = document.getElementById('statsList');
+    list.innerHTML = "";
+    
+    filteredWorkersCache.forEach(w => {
+        // 計算該師傅在當前篩選條件下的雜費總額
+        const exTotal = w.rawExtras.reduce((a,b)=>a+Number(b.amount),0);
+        
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.9rem;";
+        row.innerHTML = `
+            <div style="flex:1; display:flex; align-items:center;">
+                <div style="width:8px; height:8px; border-radius:50%; background:var(--primary); margin-right:8px;"></div>
+                ${w.name}
+            </div>
+            <div style="text-align:right; color:var(--text-sub); font-size:0.85rem;">
+                薪 $${w.rawSalary.toLocaleString()}
+            </div>
+            <div style="text-align:right; width:80px; font-weight:bold;">
+                雜 $${exTotal.toLocaleString()}
+            </div>
+        `;
+        list.appendChild(row);
+    });
+
+    openModal('modalStats');
+}
+
+/* --- 師傅編輯 & 個人雜費 (Requirement 1, 2) --- */
+function renderExtraSiteSelect(dateInputId, selectId) {
+    const dateVal = document.getElementById(dateInputId).value;
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">選擇案場 (選填)</option>';
+    if(!dateVal) return;
+    
+    // 找出當日的案場
+    const daySites = db.sites.filter(s => s.date === dateVal);
+    daySites.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.innerText = s.name;
+        select.appendChild(opt);
+    });
+}
+
+function openWorkerModal(id) {
+    editingExtraId = null;
+    document.getElementById('addExtraBox').style.display = 'none';
+    document.getElementById('btnAddExtraAction').innerText = "加入";
+    const w = id ? db.workers.find(x => x.id === id) : { id:'', name:'', rate:'', isTop:false, phone:'', note:'', isDisabled: false };
+    
+    document.getElementById('wId').value = w.id;
+    document.getElementById('wTop').checked = w.isTop;
+    document.getElementById('wName').value = w.name;
+    document.getElementById('wRate').value = w.rate;
+    document.getElementById('wPhone').value = w.phone;
+    document.getElementById('wNote').value = w.note;
+    
+    const btnsDiv = document.getElementById('wActionBtns');
+    btnsDiv.style.display = id ? 'flex' : 'none';
+    
+    if(id) {
+        document.getElementById('wStatsBlock').style.display = 'block';
+        document.getElementById('wExtraBlock').style.display = 'block';
+        
+        // 統計邏輯
+        const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
+        let workPay = monthSites.reduce((acc, s) => acc + Number(s.workers.find(sw => sw.id === w.id).snapshotRate), 0);
+        const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
+        const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
+        const workDays = new Set(monthSites.map(s => s.date)).size;
+
+        document.getElementById('wWorkDays').innerText = workDays;
+        document.getElementById('wWorkPay').innerText = workPay.toLocaleString();
+        document.getElementById('wExtraTotal').innerText = extraSum.toLocaleString();
+        document.getElementById('wFinalPay').innerText = (workPay + extraSum).toLocaleString();
+        
+        const exList = document.getElementById('wExtraList');
+        exList.innerHTML = "";
+        
+        // 雜費列表 (含案場名稱)
+        monthExtras.sort((a,b) => new Date(b.date) - new Date(a.date)); // 倒序
+        monthExtras.forEach(ex => {
+            let siteName = "";
+            if(ex.siteId) {
+                const s = db.sites.find(x => x.id === ex.siteId);
+                if(s) siteName = `<span style="font-size:0.75rem; background:#eee; padding:2px 4px; border-radius:4px; margin-left:5px;">${s.name}</span>`;
+            }
+            exList.innerHTML += `
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:5px;align-items:center; border-bottom:1px dashed var(--border); padding:8px 0;">
+                    <span>${ex.date.slice(5)} ${ex.name}${siteName}</span>
+                    <span>$${ex.amount} <span style="color:var(--danger);cursor:pointer;margin-left:8px" onclick="delExtra('${ex.id}','${w.id}')">✕</span></span>
+                </div>`;
+        });
+        
+        const btnHide = btnsDiv.children[0];
+        btnHide.innerText = w.isDisabled ? "取消隱藏" : "隱藏";
+        btnHide.className = w.isDisabled ? "btn btn-unhide" : "btn btn-hide";
+    } else {
+        document.getElementById('wStatsBlock').style.display = 'none';
+        document.getElementById('wExtraBlock').style.display = 'none';
+    }
+    openModal('modalWorker');
+}
+
+function saveOneExtra() {
+    const wid = document.getElementById('wId').value;
+    const date = document.getElementById('exDate').value;
+    const name = document.getElementById('exName').value;
+    const amount = document.getElementById('exAmt').value;
+    const siteId = document.getElementById('exSite').value; // 新增
+    
+    if(!name || !amount || !date) return alert('資料不完整');
+
+    db.extras.push({ id:'e'+Date.now(), wid, date, name, amount, siteId });
+    saveDB(); openWorkerModal(wid);
+}
+
+function delExtra(eid, wid) {
+    if(confirm('刪除？')) { db.extras = db.extras.filter(e => e.id !== eid); saveDB(); openWorkerModal(wid); }
+}
+
+/* --- 多人雜費 (Requirement 5) --- */
+function openMultiExtra() {
+    document.getElementById('meDate').value = new Date().toISOString().split('T')[0];
+    // 清空並重新渲染案場選單
+    renderExtraSiteSelect('meDate', 'meSite');
+    renderMeList();
+    openModal('modalMultiExtra');
+}
+
+function renderMeList() {
+    const filter = document.getElementById('meFilter').value.toLowerCase();
+    const list = document.getElementById('meList');
+    list.innerHTML = "";
+    
+    // 聯動主畫面篩選器 (使用 Cache)
+    let sourceWorkers = (filteredWorkersCache.length > 0) ? filteredWorkersCache : db.workers;
+    
+    sourceWorkers.forEach(w => {
+        if(w.name.toLowerCase().includes(filter)) {
+            const div = document.createElement('div'); div.className = 'chk-row';
+            div.innerHTML = `<span>${w.name}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
+            list.appendChild(div);
+        }
+    });
+}
+
+function toggleSelectAllMe() {
+    const chks = document.querySelectorAll('.me-chk');
+    const allChecked = Array.from(chks).every(c => c.checked);
+    chks.forEach(c => c.checked = !allChecked);
+}
+
+function saveMultiExtra() {
+    const date = document.getElementById('meDate').value;
+    const name = document.getElementById('meName').value;
+    const amt = document.getElementById('meAmt').value;
+    const siteId = document.getElementById('meSite').value;
+    const chks = document.querySelectorAll('.me-chk:checked');
+    
+    if(!name || !amt || chks.length === 0) return alert('資料不完整');
+    chks.forEach(c => db.extras.push({ id:'e'+Date.now()+Math.random(), wid: c.value, date, name, amount: amt, siteId }));
+    saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
+}
+
+/* --- 案場請款 & 案主管理 (Requirement 8, 9, 10) --- */
+function openPaymentModal() {
+    renderPaymentModal();
+    openModal('modalPayment');
+}
+
+function renderPaymentModal() {
+    const container = document.getElementById('payContainer');
+    container.innerHTML = "";
+    
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
+    
+    let groups = {};
+    db.clients.forEach(c => groups[c.id] = { name: c.name, sites: [], total: 0 });
+    groups['unassigned'] = { name: '未分類案場', sites: [], total: 0 };
+    
+    monthSites.forEach(s => {
+        // 計算建議金額 (Cost) = 工資 + 該案場雜費
+        let cost = 0;
+        s.workers.forEach(w => cost += Number(w.snapshotRate));
+        const siteExtras = db.extras.filter(e => e.siteId === s.id);
+        siteExtras.forEach(e => cost += Number(e.amount));
+        
+        let payAmt = db.savedPayAmts[s.id];
+        if (payAmt === undefined || payAmt === "") payAmt = cost; 
+        
+        const grpId = s.clientId || 'unassigned';
+        if (!groups[grpId]) groups[grpId] = { name: '未知案主', sites: [], total: 0 }; 
+        
+        groups[grpId].sites.push({ ...s, cost, payAmt });
+        groups[grpId].total += Number(payAmt);
+    });
+
+    Object.keys(groups).forEach(gid => {
+        const g = groups[gid];
+        if (gid === 'unassigned' && g.sites.length === 0) return; 
+        
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'client-group';
+        groupDiv.ondragover = (e) => e.preventDefault();
+        groupDiv.ondrop = (e) => onDropSite(e, gid);
+        
+        let delBtn = (gid !== 'unassigned') ? `<span style="color:var(--danger);font-size:0.8rem;cursor:pointer" onclick="delClient('${gid}')">刪除</span>` : '';
+        groupDiv.innerHTML = `
+            <div class="client-header">
+                <span>${g.name} ${delBtn}</span>
+                <span>$${g.total.toLocaleString()}</span>
+            </div>
+        `;
+        
+        g.sites.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'pay-site-item';
+            row.draggable = true;
+            row.ondragstart = (e) => onDragSite(e, s.id);
+            
+            row.innerHTML = `
+                <div class="pay-site-left">
+                    <div style="font-weight:bold">${s.name}</div>
+                    <div style="font-size:0.75rem; color:var(--text-sub)">${s.date.slice(5)} / 成本 $${s.cost}</div>
+                </div>
+                <div class="pay-site-amt">
+                    $ <input type="number" class="input-f" style="width:80px; margin:0; padding:5px; text-align:right" 
+                        value="${s.payAmt}" onchange="updateSitePay('${s.id}', this.value)">
+                </div>
+            `;
+            groupDiv.appendChild(row);
+        });
+        container.appendChild(groupDiv);
+    });
+}
+
+function addClient() {
+    const name = prompt("請輸入案主名稱：");
+    if(name) {
+        db.clients.push({ id: 'c'+Date.now(), name });
+        saveDB(); renderPaymentModal();
+    }
+}
+
+function delClient(cid) {
+    if(confirm("刪除此案主？(案場將變回未分類)")) {
+        db.sites.forEach(s => { if(s.clientId === cid) delete s.clientId; });
+        db.clients = db.clients.filter(c => c.id !== cid);
+        saveDB(); renderPaymentModal();
+    }
+}
+
+function updateSitePay(sid, val) {
+    db.savedPayAmts[sid] = val;
+    saveDB(); renderPaymentModal(); 
+}
+
+let draggingSiteId = null;
+function onDragSite(e, sid) {
+    draggingSiteId = sid;
+    e.dataTransfer.effectAllowed = 'move';
+}
+function onDropSite(e, targetClientId) {
+    e.preventDefault();
+    if (draggingSiteId) {
+        const s = db.sites.find(x => x.id === draggingSiteId);
+        if (s) {
+            if (targetClientId === 'unassigned') delete s.clientId;
+            else s.clientId = targetClientId;
+            saveDB();
+            renderPaymentModal();
+        }
+    }
+    draggingSiteId = null;
+}
+
+/* --- Quick Add / Clone --- */
 function openQuickAdd(dateStr) {
     selectedDateStr = dateStr;
     document.getElementById('quickDateTitle').innerText = dateStr;
@@ -905,7 +1467,7 @@ function cloneSiteAndEdit(templateSite, targetDate) {
         date: targetDate,
         name: templateSite.name,
         colorIdx: templateSite.colorIdx,
-        workers: [] 
+        workers: [] // Reset workers
     };
     db.sites.push(newSite);
     saveDB();
@@ -914,249 +1476,52 @@ function cloneSiteAndEdit(templateSite, targetDate) {
     setTimeout(() => openSiteModal(newSite.id), 200); 
 }
 
-/* --- iOS 滾輪 --- */
-function renderPickerWheels() {
-    const wy = document.getElementById('wheelY');
-    const wm = document.getElementById('wheelM');
+/* --- Modal Helper --- */
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = 'flex';
+    setTimeout(() => m.style.opacity = 1, 10);
+}
+function closeModal(id) {
+    if(!id) document.querySelectorAll('.overlay').forEach(o => { o.style.opacity=0; setTimeout(()=>o.style.display='none',200); });
+    else { const m = document.getElementById(id); m.style.opacity=0; setTimeout(()=>m.style.display='none',200); }
+}
+function switchPage(pid) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-'+pid).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-'+pid).classList.add('active');
     
-    if(wy.children.length > 0) return;
-    for(let i=2020; i<=2035; i++) {
-        const div = document.createElement('div');
-        div.className = 'picker-item';
-        div.innerText = i + '年'; div.dataset.val = i;
-        wy.appendChild(div);
-    }
-    for(let i=1; i<=12; i++) {
-        const div = document.createElement('div');
-        div.className = 'picker-item'; div.innerText = i + '月'; div.dataset.val = i;
-        wm.appendChild(div);
-    }
-    [wy, wm].forEach(el => el.addEventListener('scroll', updatePickerFocus));
-}
-
-function updatePickerFocus(e) {
-    const el = e.target;
-    const center = el.scrollTop + 110; 
-    let minDiff = Infinity;
-    let closestItem = null;
-    el.querySelectorAll('.picker-item').forEach(it => {
-        const itemCenter = it.offsetTop + it.offsetHeight / 2;
-        const diff = Math.abs(center - itemCenter);
-        if(diff < minDiff) {
-            minDiff = diff;
-            closestItem = it;
-        }
-    });
-    el.querySelectorAll('.picker-item').forEach(it => it.classList.remove('active'));
-    if(closestItem) closestItem.classList.add('active');
-}
-
-function openDatePicker() {
-    const el = document.getElementById('modalDatePicker');
-    const overlay = document.getElementById('pickerOverlay');
-    el.style.transform = 'translateY(0)';
-    overlay.style.display = 'flex';
-    setTimeout(()=>overlay.style.opacity=1, 10);
-    
-    setTimeout(() => {
-        const wy = document.getElementById('wheelY');
-        const wm = document.getElementById('wheelM');
-        const yItem = [...wy.children].find(c => c.dataset.val == curDate.getFullYear());
-        const mItem = [...wm.children].find(c => c.dataset.val == curDate.getMonth()+1);
-        if(yItem) wy.scrollTop = yItem.offsetTop - 90;
-        if(mItem) wm.scrollTop = mItem.offsetTop - 90;
-    }, 100);
-}
-
-function closePicker() {
-    const el = document.getElementById('modalDatePicker');
-    const overlay = document.getElementById('pickerOverlay');
-    el.style.transform = 'translateY(100%)';
-    overlay.style.opacity=0;
-    setTimeout(()=>overlay.style.display='none', 200);
-}
-
-function confirmDate() {
-    const yEl = document.querySelector('#wheelY .active');
-    const mEl = document.querySelector('#wheelM .active');
-    if(yEl && mEl) {
-        curDate.setFullYear(parseInt(yEl.dataset.val));
-        curDate.setMonth(parseInt(mEl.dataset.val)-1);
-        updateHeaderDate();
+    if(pid === 'cal') {
+        const t = THEMES[db.settings.theme];
+        const themeRgba = `rgba(${t.r},${t.g},${t.b},0.4)`;
+        const baseColor = db.settings.darkMode ? '#000000' : '#FFFFFF';
+        document.body.style.background = `linear-gradient(${themeRgba}, ${themeRgba}), ${baseColor}`;
         renderCalendar();
-        // 切換月份時，清空案場篩選
-        filterSiteIds = [];
-        
-        if(document.getElementById('tab-work').classList.contains('active')) renderWorkerList();
-        if(document.getElementById('tab-cal').classList.contains('active')) switchPage('cal');
-    }
-    closePicker();
-}
-
-/* --- 案場請款 --- */
-function openPaymentModal() {
-    const list = document.getElementById('payList');
-    list.innerHTML = "";
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
-    const uniqueNames = [...new Set(monthSites.map(s => s.name))];
-    let totalAmt = 0;
-
-    uniqueNames.forEach(name => {
-        const sitesWithName = monthSites.filter(s => s.name === name);
-        const repId = sitesWithName[0].id;
-        
-        const existingPay = db.payments.find(p => p.siteId === repId);
-        const isPaid = !!existingPay;
-        
-        let displayAmount = '';
-        if (existingPay) {
-             displayAmount = existingPay.amount || '';
-        } else {
-            displayAmount = db.savedPayAmts[repId] || '';
-        }
-        
-        if(isPaid && displayAmount) totalAmt += parseInt(displayAmount);
-
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.style.padding = '12px';
-        div.style.marginBottom = '8px';
-        div.style.display = 'flex'; 
-        div.style.justifyContent='space-between'; 
-        div.style.alignItems='center';
-        div.style.borderLeft = isPaid ? '5px solid #ccc' : '5px solid ' + THEMES[db.settings.theme].hex;
-        
-        div.innerHTML = `
-            <b style="flex:1">${name}</b> 
-            <div style="display:flex;align-items:center;gap:10px">
-                <input type="number" class="input-f" style="margin:0;padding:8px;width:80px;text-align:right" 
-                    placeholder="$" value="${displayAmount}" 
-                    oninput="updatePayAmount('${repId}', this.value)" onclick="event.stopPropagation()">
-                <input type="checkbox" style="width:22px;height:22px;accent-color:var(--primary);cursor:pointer" 
-                    ${isPaid?'checked':''} 
-                    onchange="toggleGroupPay('${name}', '${repId}', this)">
-            </div>
-        `;
-        list.appendChild(div);
-    });
-
-    if(uniqueNames.length === 0) list.innerHTML = "<div style='text-align:center;color:var(--text-sub)'>本月無案場</div>";
-    
-    document.getElementById('payTotalDisplay').innerText = `$${totalAmt.toLocaleString()}`;
-    
-    const noteArea = document.getElementById('payNote');
-    noteArea.value = db.paymentMeta && db.paymentMeta[ym] ? db.paymentMeta[ym] : "";
-    noteArea.onchange = () => {
-        if(!db.paymentMeta) db.paymentMeta = {};
-        db.paymentMeta[ym] = noteArea.value;
-        saveDB();
-    };
-
-    openModal('modalPayment');
-}
-
-function updatePayAmount(repId, val) {
-    db.savedPayAmts[repId] = val;
-    const idx = db.payments.findIndex(p => p.siteId === repId);
-    if(idx !== -1) {
-        db.payments[idx].amount = val;
-    }
-    saveDB();
-    
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
-    const monthRepIds = [...new Set(monthSites.map(s=>s.name))].map(n => monthSites.find(s=>s.name===n).id);
-    
-    let total = 0;
-    db.payments.forEach(p => {
-         if(monthRepIds.includes(p.siteId)) total += Number(p.amount||0);
-    });
-    document.getElementById('payTotalDisplay').innerText = `$${total.toLocaleString()}`;
-}
-
-function toggleGroupPay(name, repId, checkbox) {
-    const isChecked = checkbox.checked;
-    if (!isChecked) {
-        if (!confirm("確定要取消「已請款」狀態嗎？")) {
-            checkbox.checked = true;
-            return;
-        }
-    }
-
-    if(isChecked) {
-        const amount = db.savedPayAmts[repId] || '';
-        if(!db.payments.some(p => p.siteId === repId)) {
-            db.payments.push({ siteId: repId, date: new Date().toISOString(), amount: amount });
-        }
     } else {
-        db.payments = db.payments.filter(p => p.siteId !== repId);
+        document.body.style.background = 'var(--bg-std)';
+        if(pid === 'work') renderWorkerList();
+        if(pid === 'set') renderThemeGrid();
     }
-    
-    saveDB(); openPaymentModal();
 }
 
-/* --- 案場編輯 --- */
+/* --- Picker & Site Edit (Standard) --- */
 function openSiteModal(siteId) {
     closeModal('modalQuickAdd');
     openModal('modalSite');
-    
     const s = siteId ? db.sites.find(x => x.id === siteId) : { id: '', name: '', colorIdx: 0, workers: [] };
-    
     document.getElementById('sId').value = s.id;
     document.getElementById('sDate').value = selectedDateStr;
     document.getElementById('sName').value = s.name;
     document.getElementById('btnDelSite').style.display = siteId ? 'block' : 'none';
-    
     renderSiteColorBox(s.colorIdx);
     renderSiteWorkerSelect(s.workers);
 }
-
-function renderSiteWorkerSelect(currentWorkers = []) {
-    const filter = document.getElementById('sWorkerFilter').value.toLowerCase();
-    const list = document.getElementById('sWorkerList');
-    list.innerHTML = "";
-    const currentIds = currentWorkers.map(w => w.id);
-    
-    // 計算工天 (與 Personnel 邏輯一致)
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const workersWithStats = db.workers.map(w => {
-        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
-        
-        // [Request 2] 修正: Set 過濾重複日期
-        const workDays = new Set(monthSites.map(s => s.date)).size;
-        
-        return { ...w, daysCount: workDays };
-    });
-    // 排序：置頂 -> 工天多到少 -> 隱藏
-    workersWithStats.sort((a,b) => {
-        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
-        if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
-        return b.daysCount - a.daysCount;
-    });
-    workersWithStats.forEach(w => {
-        if (w.isDisabled && !currentIds.includes(w.id)) return;
-
-        if(w.name.toLowerCase().includes(filter)) {
-            const row = document.createElement('div');
-            row.className = 'chk-row';
-            if(w.isDisabled) row.classList.add('disabled-row');
-            
-            const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold;margin-right:2px;vertical-align:text-bottom"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : '';
-            const nameDisplay = w.isDisabled ? `${w.name} (隱藏)` : w.name;
-            
-            row.innerHTML = `<span>${star}${nameDisplay}</span> <input type="checkbox" value="${w.id}" ${currentIds.includes(w.id)?'checked':''}>`;
-            list.appendChild(row);
-        }
-    });
-}
-
 function saveSite() {
     const id = document.getElementById('sId').value;
     const date = document.getElementById('sDate').value;
     const name = document.getElementById('sName').value;
     if(!name) return alert("請輸入名稱");
-    
     const activeDot = document.querySelector('#sColorBox .active');
     const colorIdx = activeDot ? parseInt(activeDot.dataset.idx) : 0;
     const chks = document.querySelectorAll('#sWorkerList input:checked');
@@ -1169,15 +1534,16 @@ function saveSite() {
         const master = db.workers.find(w => w.id === wid);
         return { id: wid, snapshotRate: master ? (Number(master.rate)||0) : 0 };
     });
-    const data = { id: id || 's'+Date.now(), date, name, colorIdx, workers: newWorkers };
+    
+    const clientId = oldSite ? oldSite.clientId : undefined;
+    
+    const data = { id: id || 's'+Date.now(), date, name, colorIdx, workers: newWorkers, clientId };
     if(id) {
         const idx = db.sites.findIndex(x => x.id === id);
         db.sites[idx] = data;
     } else db.sites.push(data);
-    
     saveDB(); closeModal('modalSite'); renderCalendar();
 }
-
 function delSite(id) {
     if(!id) id = document.getElementById('sId').value;
     if(confirm('確定刪除？')) {
@@ -1186,549 +1552,29 @@ function delSite(id) {
         saveDB(); closeModal(null); renderCalendar();
     }
 }
-
-/* --- 案場篩選 Modal (Multi-Select) --- */
-function openSiteSelect() {
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const monthSites = db.sites.filter(s => s.date.startsWith(ym));
-    const uniqueMap = new Map();
-    // 使用案場名稱作為唯一鍵
-    monthSites.forEach(s => uniqueMap.set(s.name, s));
-    
-    const list = document.getElementById('ssList');
+function renderSiteWorkerSelect(currentWorkers = []) {
+    const filter = document.getElementById('sWorkerFilter').value.toLowerCase();
+    const list = document.getElementById('sWorkerList');
     list.innerHTML = "";
-    
-    if(uniqueMap.size === 0) {
-        list.innerHTML = "<div style='text-align:center;color:var(--text-sub);padding:10px'>本月尚無案場</div>";
-    } else {
-        // [Request 1, 3] 複選列表 + 不篩選按鈕
-        const resetItem = document.createElement('div');
-        resetItem.className = 'quick-site-row';
-        resetItem.innerHTML = `<span style="color:var(--text-sub)">不篩選 (顯示全部)</span>`;
-        resetItem.onclick = () => { 
-            filterSiteIds = []; // 清空
-            closeModal('modalSiteSelect'); 
-            renderWorkerList(); 
-        };
-        list.appendChild(resetItem);
-
-        uniqueMap.forEach((s, name) => {
-            const div = document.createElement('div');
-            div.className = 'chk-row';
-            const c = THEMES[s.colorIdx||0].hex;
-            const isChecked = filterSiteIds.includes(name);
-            
-            div.innerHTML = `
-                <span style="display:flex;align-items:center">
-                    <div style="width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px"></div>
-                    ${name}
-                </span>
-                <input type="checkbox" value="${name}" ${isChecked ? 'checked' : ''}>
-            `;
-            list.appendChild(div);
-        });
-    }
-    openModal('modalSiteSelect');
-}
-
-function applySiteFilter() {
-    // 收集所有勾選的案場名稱
-    const chks = document.querySelectorAll('#ssList input:checked');
-    filterSiteIds = Array.from(chks).map(c => c.value);
-    closeModal('modalSiteSelect');
-    renderWorkerList();
-}
-
-function resetDateFilter() {
-    document.getElementById('wDateFilter').value = '';
-    renderWorkerList();
-}
-
-
-/* --- 師傅與邏輯 --- */
-function renderWorkerList() {
-    const wSearch = document.getElementById('wSearch').value.toLowerCase();
-    const dFilter = document.getElementById('wDateFilter').value;
-    document.getElementById('btnDateReset').style.display = dFilter ? 'block' : 'none';
-
-    const list = document.getElementById('workerList');
-    list.innerHTML = "";
-    
+    const currentIds = currentWorkers.map(w => w.id);
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    
-    // Step 1: 先計算所有師傅的本月薪資
-    const allWorkersWithStats = db.workers.map(w => {
+    const workersWithStats = db.workers.map(w => {
         const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
-        let salary = 0;
-        monthSites.forEach(s => salary += Number(s.workers.find(sw => sw.id === w.id).snapshotRate));
-        const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
-        const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
-        
-        // [Request 2] 修正: 使用 Set 計算不重複天數
         const workDays = new Set(monthSites.map(s => s.date)).size;
-
-        return {
-            ...w,
-            daysCount: workDays,
-            totalPay: salary + extraSum
-        };
+        return { ...w, daysCount: workDays };
     });
-    // 計算總薪資
-    const grandTotal = allWorkersWithStats.reduce((sum, w) => sum + w.totalPay, 0);
-    document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
-    
-    // Step 2: 排序
-    allWorkersWithStats.sort((a,b) => {
-        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
-        if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
-        return b.daysCount - a.daysCount;
-    });
-
-    // Step 3: 篩選邏輯 (交集)
-    // 找出符合條件的 Worker IDs
-    let validWorkerIds = new Set(db.workers.map(w => w.id));
-
-    // [Request 6] 日期與案場併用邏輯
-    let filteredSites = [];
-    
-    // A. 找出符合案場篩選的 Sites
-    if (filterSiteIds.length > 0) {
-        // 本月所有符合名稱的案場
-        filteredSites = db.sites.filter(s => s.date.startsWith(ym) && filterSiteIds.includes(s.name));
-    } else {
-        // 沒篩選案場，則視為本月所有案場
-        filteredSites = db.sites.filter(s => s.date.startsWith(ym));
-    }
-
-    // B. 如果有日期篩選，進一步過濾上述 Sites
-    if (dFilter) {
-        filteredSites = filteredSites.filter(s => s.date === dFilter);
-        
-        // 另外處理: 如果沒選案場，單純日期篩選也要能運作 (即使該日沒案場，若有篩選器邏輯應顯示空或符合該日的人)
-        // 這裡的邏輯是: validWorkerIds 應該是 (日期篩選出來的人) AND (案場篩選出來的人)
-        
-        // 1. 日期篩選的人
-        const dateWorkerIds = db.sites
-            .filter(s => s.date === dFilter)
-            .flatMap(s => s.workers.map(w => w.id));
-        
-        validWorkerIds = new Set([...validWorkerIds].filter(x => dateWorkerIds.includes(x)));
-    }
-
-    // C. 案場篩選的人 (如果有選案場)
-    if (filterSiteIds.length > 0) {
-        // 注意: 這裡我們只取 filteredSites (已經經過日期過濾) 中的人
-        // 這樣就達成了 "1/6 參與 A 案場" 的邏輯
-        const siteWorkerIds = filteredSites.flatMap(s => s.workers.map(w => w.id));
-        validWorkerIds = new Set([...validWorkerIds].filter(x => siteWorkerIds.includes(x)));
-    }
-
-    currentFilteredWorkerIds = []; // 重置暫存
-
-    allWorkersWithStats.forEach(w => {
-        // 文字搜尋
-        if(wSearch && !w.name.toLowerCase().includes(wSearch)) return;
-        // 篩選器過濾
-        if((dFilter || filterSiteIds.length > 0) && !validWorkerIds.has(w.id)) return;
-
-        currentFilteredWorkerIds.push(w.id); // 加入顯示名單
-
-        const card = document.createElement('div');
-        card.className = 'worker-card card';
-        if(w.isDisabled) card.classList.add('disabled');
-        card.style.padding = '15px';
-        
-        const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ' : '';
-        const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name;
-        
-        // [Request 2] 顯示案場標籤
-        let tagHtml = '';
-        if (filterSiteIds.length > 0) {
-            // 找出這個師傅在本月參與了哪些「被篩選的案場」
-            // 並且如果有用日期篩選，只顯示該日期的案場標籤
-            const workerInvolvedSites = filteredSites.filter(s => s.workers.some(sw => sw.id === w.id));
-            const uniqueSiteNames = [...new Set(workerInvolvedSites.map(s => s.name))];
-            
-            uniqueSiteNames.forEach(sName => {
-                // 找顏色
-                const siteObj = workerInvolvedSites.find(s => s.name === sName);
-                const c = THEMES[siteObj.colorIdx||0].hex;
-                tagHtml += `<span style="font-size:0.75rem; background:${c}; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;">${sName}</span>`;
-            });
-        }
-
-        card.innerHTML = `
-            <div><b>${star}${nameText}${tagHtml}</b><div style="font-size:0.85rem;color:var(--text-sub);margin-top:4px">${w.daysCount} 天上工</div></div>
-            <div style="font-size:1.2rem;font-weight:800">$${w.totalPay.toLocaleString()}</div>
-        `;
-        card.onclick = () => openWorkerModal(w.id);
-        list.appendChild(card);
-    });
-}
-
-// 輔助：更新雜費案場選單 (Request 7)
-function renderExtraSiteSelect(dateInputId, selectId) {
-    const dateVal = document.getElementById(dateInputId).value;
-    const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">選擇案場 (選填)</option>';
-    if(!dateVal) return;
-    
-    // 找出當日的案場
-    const daySites = db.sites.filter(s => s.date === dateVal);
-    daySites.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.innerText = s.name;
-        select.appendChild(opt);
-    });
-}
-
-function openWorkerModal(id) {
-    editingExtraId = null;
-    document.getElementById('addExtraBox').style.display = 'none';
-    document.getElementById('btnAddExtraAction').innerText = "加入";
-    const w = id ?
-        db.workers.find(x => x.id === id) : { id:'', name:'', rate:'', isTop:false, phone:'', note:'', isDisabled: false };
-    document.getElementById('wId').value = w.id;
-    document.getElementById('wTop').checked = w.isTop;
-    document.getElementById('wName').value = w.name;
-    document.getElementById('wRate').value = w.rate;
-    document.getElementById('wPhone').value = w.phone;
-    document.getElementById('wNote').value = w.note;
-    const btnsDiv = document.getElementById('wActionBtns');
-    btnsDiv.style.display = id ? 'flex' : 'none';
-    if(id) {
-        document.getElementById('wStatsBlock').style.display = 'block';
-        document.getElementById('wExtraBlock').style.display = 'block';
-        const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-        const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === w.id));
-        
-        let workPay = monthSites.reduce((acc, s) => acc + Number(s.workers.find(sw => sw.id === w.id).snapshotRate), 0);
-        const monthExtras = db.extras.filter(e => e.wid === w.id && e.date.startsWith(ym));
-        const extraSum = monthExtras.reduce((a,b) => a + Number(b.amount), 0);
-        
-        // [Request 2] 修正: Set 計算工天
-        const workDays = new Set(monthSites.map(s => s.date)).size;
-
-        document.getElementById('wWorkDays').innerText = workDays;
-        document.getElementById('wWorkPay').innerText = workPay.toLocaleString();
-        document.getElementById('wExtraTotal').innerText = extraSum.toLocaleString();
-        document.getElementById('wFinalPay').innerText = (workPay + extraSum).toLocaleString();
-        
-        const exList = document.getElementById('wExtraList');
-        exList.innerHTML = "";
-        // 依照名稱分組
-        const grouped = {};
-        monthExtras.forEach(ex => {
-            if(!grouped[ex.name]) grouped[ex.name] = { count:0, total:0, name: ex.name };
-            grouped[ex.name].count++;
-            grouped[ex.name].total += parseInt(ex.amount);
-        });
-        Object.values(grouped).forEach(g => {
-             // [Request 3] 修正: 總額不使用粗體
-             exList.innerHTML += `
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:5px;align-items:center; border-bottom:1px dashed var(--border); padding:8px 0; cursor:pointer" onclick="openExtraDetail('${w.id}', '${g.name}')">
-                    <span>${g.name} <span style="font-size:0.8em;color:var(--text-sub)">(${g.count}筆)</span></span>
-                    <span>$${g.total} ></span>
-                </div>`;
-        });
-        
-        const btnHide = btnsDiv.children[0];
-        if(w.isDisabled) {
-            btnHide.innerText = "取消隱藏";
-            btnHide.className = "btn btn-unhide";
-        } else {
-            btnHide.innerText = "隱藏";
-            btnHide.className = "btn btn-hide";
-        }
-
-    } else {
-        document.getElementById('wStatsBlock').style.display = 'none';
-        document.getElementById('wExtraBlock').style.display = 'none';
-    }
-    openModal('modalWorker');
-}
-
-/* --- 個人上工日曆 --- */
-function openPersonalCalendar(wid) {
-    if(!wid) return;
-    const w = db.workers.find(x => x.id === wid);
-    if(!w) return;
-    
-    document.getElementById('pcTitle').innerText = `${curDate.getFullYear()}年${curDate.getMonth()+1}月 - ${w.name}`;
-    const list = document.getElementById('pcList');
-    list.innerHTML = "";
-    
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const daysInM = new Date(curDate.getFullYear(), curDate.getMonth()+1, 0).getDate();
-    const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === wid));
-    const monthExtras = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym));
-    
-    let hasData = false;
-    for(let d=1; d<=daysInM; d++) {
-        const dateStr = `${ym}-${String(d).padStart(2,'0')}`;
-        const daySites = monthSites.filter(s => s.date === dateStr);
-        const dayExtras = monthExtras.filter(e => e.date === dateStr);
-        if(daySites.length === 0 && dayExtras.length === 0) continue;
-        hasData = true;
-        
-        let contentHtml = "";
-        // 案場資訊
-        daySites.forEach(s => {
-            const sw = s.workers.find(x => x.id === wid);
-            contentHtml += `<div class="p-cal-site"><b>${s.name}</b> <span style="color:var(--text-sub)">($${sw.snapshotRate})</span></div>`;
-        });
-        // [Request 7] 雜費資訊: 移除「雜費：」前綴
-        dayExtras.forEach(e => {
-             contentHtml += `<div class="p-cal-extra">${e.name} $${e.amount}</div>`;
-        });
-        const row = document.createElement('div');
-        row.className = 'p-cal-row';
-        row.innerHTML = `
-            <div class="p-cal-date">${d}<span style="font-size:0.7em;font-weight:normal">日</span></div>
-            <div class="p-cal-content">${contentHtml}</div>
-        `;
-        list.appendChild(row);
-    }
-    
-    if(!hasData) list.innerHTML = "<div style='text-align:center;padding:20px;color:var(--text-sub)'>本月無上工記錄</div>";
-    
-    openModal('modalPersonalCal');
-}
-
-/* --- 雜費細項列表 --- */
-function openExtraDetail(wid, extraName) {
-    const w = db.workers.find(x => x.id === wid);
-    document.getElementById('edTitle').innerText = `雜費細項: ${extraName}`;
-    
-    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-    const items = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym) && e.name === extraName);
-    
-    // [Request 10] 依照日期排序
-    items.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    const list = document.getElementById('edList');
-    list.innerHTML = "";
-    
-    items.forEach(ex => {
-         // [Request 10] 顯示: 日期 | 案場 | 金額
-         let siteName = "";
-         if (ex.siteId) {
-             const s = db.sites.find(x => x.id === ex.siteId);
-             if (s) siteName = `<span style="font-size:0.75rem; background:#eee; padding:2px 4px; border-radius:4px; margin-left:5px;">${s.name}</span>`;
-         }
-
-         list.innerHTML += `
-            <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:10px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
-                <span style="cursor:pointer;flex:1" onclick="editExtraFromDetail('${ex.id}', '${wid}')">
-                    ${ex.date.slice(5)} ${siteName} <span style="font-size:0.8em;color:var(--primary)">✎ 編輯</span>
-                </span>
-                <span>$${ex.amount} <span style="color:var(--danger);cursor:pointer;margin-left:8px" onclick="delExtraFromDetail('${ex.id}','${wid}','${extraName}')">✕</span></span>
-            </div>`;
-    });
-    openModal('modalExtraDetail');
-}
-
-// 從細項介面編輯 (回填到主介面編輯框)
-function editExtraFromDetail(eid, wid) {
-    closeModal('modalExtraDetail');
-    editExtra(eid);
-}
-
-// 從細項介面刪除
-function delExtraFromDetail(eid, wid, extraName) {
-    if(confirm('刪除？')) { 
-        db.extras = db.extras.filter(e => e.id !== eid);
-        saveDB();
-        // 重新渲染細項列表，若空了則關閉
-        const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
-        const remaining = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym) && e.name === extraName);
-        if(remaining.length === 0) {
-            closeModal('modalExtraDetail');
-            openWorkerModal(wid);
-        } else {
-            openExtraDetail(wid, extraName);
-        }
-    }
-}
-
-
-function saveWorker() {
-    const id = document.getElementById('wId').value;
-    const name = document.getElementById('wName').value;
-    
-    if(!name) return alert('請輸入姓名');
-
-    const data = {
-        name: name,
-        rate: document.getElementById('wRate').value,
-        isTop: document.getElementById('wTop').checked,
-        phone: document.getElementById('wPhone').value,
-        note: document.getElementById('wNote').value
-    };
-    if(id) {
-        const idx = db.workers.findIndex(x => x.id === id);
-        db.workers[idx] = { ...db.workers[idx], ...data };
-    } else {
-        db.workers.push({
-            id: 'w'+Date.now(),
-            ...data,
-            isDisabled: false
-        });
-    }
-    
-    saveDB();
-    closeModal('modalWorker'); renderWorkerList();
-}
-
-function toggleHideWorker() {
-    const id = document.getElementById('wId').value;
-    const w = db.workers.find(x => x.id === id);
-    if(w) {
-        w.isDisabled = !w.isDisabled;
-        if(w.isDisabled) {
-            w.isTop = false;
-        }
-        saveDB();
-        closeModal('modalWorker');
-        renderWorkerList();
-    }
-}
-
-function hardDeleteWorker() {
-    if(confirm('警告：確定刪除？這將會清除該師傅的所有歷史紀錄且無法復原！')) {
-        const id = document.getElementById('wId').value;
-        db.workers = db.workers.filter(x => x.id !== id);
-        db.sites.forEach(s => {
-            s.workers = s.workers.filter(sw => sw.id !== id);
-        });
-        db.extras = db.extras.filter(e => e.wid !== id);
-        saveDB();
-        closeModal('modalWorker');
-        renderWorkerList();
-    }
-}
-
-/* --- 雜費 & 多人雜費 --- */
-function toggleAddExtra() {
-    const box = document.getElementById('addExtraBox');
-    const isHidden = box.style.display === 'none';
-    box.style.display = isHidden ? 'block' : 'none';
-    if(isHidden) {
-        editingExtraId = null;
-        document.getElementById('exDate').value = new Date().toISOString().split('T')[0];
-        // [Request 7] 預載案場
-        renderExtraSiteSelect('exDate', 'exSite');
-        document.getElementById('exName').value = '';
-        document.getElementById('exAmt').value = '';
-        document.getElementById('btnAddExtraAction').innerText = "加入";
-    }
-}
-
-function editExtra(eid) {
-    const ex = db.extras.find(e => e.id === eid);
-    if(!ex) return;
-    document.getElementById('addExtraBox').style.display = 'block';
-    document.getElementById('exDate').value = ex.date;
-    // 編輯時也要載入案場
-    renderExtraSiteSelect('exDate', 'exSite');
-    setTimeout(() => document.getElementById('exSite').value = ex.siteId || '', 100);
-    
-    document.getElementById('exName').value = ex.name;
-    document.getElementById('exAmt').value = ex.amount;
-    editingExtraId = eid;
-    document.getElementById('btnAddExtraAction').innerText = "更新";
-}
-
-function saveOneExtra() {
-    const wid = document.getElementById('wId').value;
-    const date = document.getElementById('exDate').value;
-    const name = document.getElementById('exName').value;
-    const amount = document.getElementById('exAmt').value;
-    const siteId = document.getElementById('exSite').value; // [Request 7]
-
-    if(!name || !amount) return alert('資料不完整');
-
-    if (editingExtraId) {
-        const idx = db.extras.findIndex(e => e.id === editingExtraId);
-        if(idx !== -1) db.extras[idx] = { ...db.extras[idx], date, name, amount, siteId };
-        editingExtraId = null;
-    } else {
-        db.extras.push({ id:'e'+Date.now(), wid, date, name, amount, siteId });
-    }
-    saveDB(); openWorkerModal(wid);
-}
-
-function delExtra(eid, wid) {
-    if(confirm('刪除？')) { db.extras = db.extras.filter(e => e.id !== eid);
-        saveDB(); openWorkerModal(wid); }
-}
-
-function openMultiExtra() {
-    document.getElementById('meDate').value = new Date().toISOString().split('T')[0];
-    // [Request 7] 預載案場
-    renderExtraSiteSelect('meDate', 'meSite');
-    renderMeList();
-    openModal('modalMultiExtra');
-}
-
-function renderMeList() {
-    const filter = document.getElementById('meFilter').value.toLowerCase();
-    const list = document.getElementById('meList');
-    list.innerHTML = "";
-    
-    // [Request 9] 聯動搜尋器
-    // 如果目前有搜尋結果 (currentFilteredWorkerIds 有值)，則只顯示這些人
-    // 否則顯示全部
-    // 注意：初次載入或無搜尋時 currentFilteredWorkerIds 應該要包含所有非隱藏的人，
-    // 但為了簡單，我們直接判斷：如果有存到 ID 就用，沒存到(空陣列)可能是剛開，就用 db.workers
-    
-    let sourceWorkers = db.workers;
-    // 如果主畫面有被過濾過 (藉由檢查全域變數是否被 populate)
-    if (currentFilteredWorkerIds && currentFilteredWorkerIds.length > 0) {
-        sourceWorkers = db.workers.filter(w => currentFilteredWorkerIds.includes(w.id));
-    }
-
-    // 排序
-    const workersWithStats = sourceWorkers.map(w => w); // Shallow copy
-    workersWithStats.sort((a,b) => {
-        if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
-        return 0; // 這裡簡化排序，只看置頂
-    });
-
+    workersWithStats.sort((a,b) => b.daysCount - a.daysCount);
     workersWithStats.forEach(w => {
+        if (w.isDisabled && !currentIds.includes(w.id)) return;
         if(w.name.toLowerCase().includes(filter)) {
-            const div = document.createElement('div'); div.className = 'chk-row';
-            if(w.isDisabled) div.classList.add('disabled-row');
-            const nameDisplay = w.isDisabled ? `${w.name} (隱藏)` : w.name;
-            div.innerHTML = `<span>${nameDisplay}</span> <input type="checkbox" class="me-chk" value="${w.id}">`;
-            list.appendChild(div);
+            const row = document.createElement('div');
+            row.className = 'chk-row';
+            if(w.isDisabled) row.classList.add('disabled-row');
+            row.innerHTML = `<span>${w.name}</span> <input type="checkbox" value="${w.id}" ${currentIds.includes(w.id)?'checked':''}>`;
+            list.appendChild(row);
         }
     });
 }
-
-// [Request 9] 全選功能
-function toggleSelectAllMe() {
-    const chks = document.querySelectorAll('#meList .me-chk');
-    // 檢查是否目前全部已勾選 (只針對可見的)
-    const allChecked = Array.from(chks).every(c => c.checked);
-    // 反向操作
-    chks.forEach(c => c.checked = !allChecked);
-}
-
-function saveMultiExtra() {
-    const date = document.getElementById('meDate').value;
-    const name = document.getElementById('meName').value;
-    const amt = document.getElementById('meAmt').value;
-    const siteId = document.getElementById('meSite').value; // [Request 7]
-    const chks = document.querySelectorAll('.me-chk:checked');
-    
-    if(!name || !amt || chks.length === 0) return alert('資料不完整');
-    chks.forEach(c => db.extras.push({ id:'e'+Date.now()+Math.random(), wid: c.value, date, name, amount: amt, siteId }));
-    saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
-}
-
-/* --- 系統設定 --- */
 function renderThemeGrid() {
     const box = document.getElementById('themeBox');
     box.innerHTML = "";
@@ -1764,47 +1610,166 @@ function applyTheme(i) {
     r.setProperty('--theme-r', t.r); r.setProperty('--theme-g', t.g);
     r.setProperty('--theme-b', t.b);
 }
+function renderPickerWheels() {
+    const wy = document.getElementById('wheelY');
+    const wm = document.getElementById('wheelM');
+    if(wy.children.length > 0) return;
+    for(let i=2020; i<=2035; i++) {
+        const div = document.createElement('div');
+        div.className = 'picker-item'; div.innerText = i + '年'; div.dataset.val = i;
+        wy.appendChild(div);
+    }
+    for(let i=1; i<=12; i++) {
+        const div = document.createElement('div');
+        div.className = 'picker-item'; div.innerText = i + '月'; div.dataset.val = i;
+        wm.appendChild(div);
+    }
+    [wy, wm].forEach(el => el.addEventListener('scroll', updatePickerFocus));
+}
+function updatePickerFocus(e) {
+    const el = e.target;
+    const center = el.scrollTop + 110; 
+    let minDiff = Infinity;
+    let closestItem = null;
+    el.querySelectorAll('.picker-item').forEach(it => {
+        const diff = Math.abs(center - (it.offsetTop + it.offsetHeight / 2));
+        if(diff < minDiff) { minDiff = diff; closestItem = it; }
+    });
+    el.querySelectorAll('.picker-item').forEach(it => it.classList.remove('active'));
+    if(closestItem) closestItem.classList.add('active');
+}
+function openDatePicker() {
+    const el = document.getElementById('modalDatePicker');
+    const overlay = document.getElementById('pickerOverlay');
+    el.style.transform = 'translateY(0)';
+    overlay.style.display = 'flex';
+    setTimeout(()=>overlay.style.opacity=1, 10);
+    setTimeout(() => {
+        const wy = document.getElementById('wheelY');
+        const wm = document.getElementById('wheelM');
+        const yItem = [...wy.children].find(c => c.dataset.val == curDate.getFullYear());
+        const mItem = [...wm.children].find(c => c.dataset.val == curDate.getMonth()+1);
+        if(yItem) wy.scrollTop = yItem.offsetTop - 90;
+        if(mItem) wm.scrollTop = mItem.offsetTop - 90;
+    }, 100);
+}
+function closePicker() {
+    const el = document.getElementById('modalDatePicker');
+    const overlay = document.getElementById('pickerOverlay');
+    el.style.transform = 'translateY(100%)';
+    overlay.style.opacity=0;
+    setTimeout(()=>overlay.style.display='none', 200);
+}
+function confirmDate() {
+    const yEl = document.querySelector('#wheelY .active');
+    const mEl = document.querySelector('#wheelM .active');
+    if(yEl && mEl) {
+        curDate.setFullYear(parseInt(yEl.dataset.val));
+        curDate.setMonth(parseInt(mEl.dataset.val)-1);
+        updateHeaderDate();
+        renderCalendar();
+        filterSiteIds = []; 
+        if(document.getElementById('tab-work').classList.contains('active')) renderWorkerList();
+        if(document.getElementById('tab-cal').classList.contains('active')) switchPage('cal');
+    }
+    closePicker();
+}
+function saveWorker() {
+    const id = document.getElementById('wId').value;
+    const name = document.getElementById('wName').value;
+    if(!name) return alert('請輸入姓名');
+    const data = { name, rate: document.getElementById('wRate').value, isTop: document.getElementById('wTop').checked, phone: document.getElementById('wPhone').value, note: document.getElementById('wNote').value };
+    if(id) {
+        const idx = db.workers.findIndex(x => x.id === id);
+        db.workers[idx] = { ...db.workers[idx], ...data };
+    } else {
+        db.workers.push({ id: 'w'+Date.now(), ...data, isDisabled: false });
+    }
+    saveDB(); closeModal('modalWorker'); renderWorkerList();
+}
+function toggleHideWorker() {
+    const id = document.getElementById('wId').value;
+    const w = db.workers.find(x => x.id === id);
+    if(w) { w.isDisabled = !w.isDisabled; if(w.isDisabled) w.isTop = false; saveDB(); closeModal('modalWorker'); renderWorkerList(); }
+}
+function hardDeleteWorker() {
+    if(confirm('警告：確定刪除？')) {
+        const id = document.getElementById('wId').value;
+        db.workers = db.workers.filter(x => x.id !== id);
+        db.sites.forEach(s => s.workers = s.workers.filter(sw => sw.id !== id));
+        db.extras = db.extras.filter(e => e.wid !== id);
+        saveDB(); closeModal('modalWorker'); renderWorkerList();
+    }
+}
+function toggleAddExtra() {
+    const box = document.getElementById('addExtraBox');
+    const isHidden = box.style.display === 'none';
+    box.style.display = isHidden ? 'block' : 'none';
+    if(isHidden) {
+        editingExtraId = null;
+        document.getElementById('exDate').value = new Date().toISOString().split('T')[0];
+        renderExtraSiteSelect('exDate', 'exSite'); 
+        document.getElementById('exName').value = '';
+        document.getElementById('exAmt').value = '';
+        document.getElementById('btnAddExtraAction').innerText = "加入";
+    }
+}
 function toggleGasLock() {
     const isLocked = document.getElementById('gasLock').checked;
     const inp = document.getElementById('gasUrl');
-    if(isLocked) { inp.style.background='var(--bg-std)'; inp.disabled=true;
-    }
-    else { if(db.settings.gasLock && !confirm('解除鎖定？')) { document.getElementById('gasLock').checked=true; return; } inp.style.background='var(--bg-card)'; inp.disabled=false;
-    }
+    if(isLocked) { inp.style.background='var(--bg-std)'; inp.disabled=true; }
+    else { if(db.settings.gasLock && !confirm('解除鎖定？')) { document.getElementById('gasLock').checked=true; return; } inp.style.background='var(--bg-card)'; inp.disabled=false; }
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
-function masterReset() {
-    if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V7');
-    location.reload(); }
+function masterReset() { if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V7'); location.reload(); } }
+function openPersonalCalendar(wid) {
+    if(!wid) return;
+    const w = db.workers.find(x => x.id === wid);
+    document.getElementById('pcTitle').innerText = `${curDate.getFullYear()}年${curDate.getMonth()+1}月 - ${w.name}`;
+    const list = document.getElementById('pcList');
+    list.innerHTML = "";
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const daysInM = new Date(curDate.getFullYear(), curDate.getMonth()+1, 0).getDate();
+    const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === wid));
+    const monthExtras = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym));
+    let hasData = false;
+    for(let d=1; d<=daysInM; d++) {
+        const dateStr = `${ym}-${String(d).padStart(2,'0')}`;
+        const daySites = monthSites.filter(s => s.date === dateStr);
+        const dayExtras = monthExtras.filter(e => e.date === dateStr);
+        if(daySites.length === 0 && dayExtras.length === 0) continue;
+        hasData = true;
+        let contentHtml = "";
+        daySites.forEach(s => { const sw = s.workers.find(x => x.id === wid); contentHtml += `<div class="p-cal-site"><b>${s.name}</b> <span style="color:var(--text-sub)">($${sw.snapshotRate})</span></div>`; });
+        dayExtras.forEach(e => { contentHtml += `<div class="p-cal-extra">${e.name} $${e.amount}</div>`; });
+        const row = document.createElement('div');
+        row.className = 'p-cal-row';
+        row.innerHTML = `<div class="p-cal-date">${d}<span style="font-size:0.7em;font-weight:normal">日</span></div><div class="p-cal-content">${contentHtml}</div>`;
+        list.appendChild(row);
+    }
+    if(!hasData) list.innerHTML = "<div style='text-align:center;padding:20px;color:var(--text-sub)'>本月無上工記錄</div>";
+    openModal('modalPersonalCal');
 }
-
-/* --- Modal Helper --- */
-function openModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = 'flex';
-    setTimeout(() => m.style.opacity = 1, 10);
+function openExtraDetail(wid, extraName) {
+    const w = db.workers.find(x => x.id === wid);
+    document.getElementById('edTitle').innerText = `雜費細項: ${extraName}`;
+    const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+    const items = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym) && e.name === extraName);
+    items.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const list = document.getElementById('edList');
+    list.innerHTML = "";
+    items.forEach(ex => {
+         let siteName = ex.siteId ? `(${db.sites.find(s=>s.id===ex.siteId)?.name || '未知'})` : '';
+         list.innerHTML += `<div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:10px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px"><span style="cursor:pointer;flex:1" onclick="editExtraFromDetail('${ex.id}', '${wid}')">${ex.date.slice(5)} ${siteName} <span style="font-size:0.8em;color:var(--primary)">✎ 編輯</span></span><span>$${ex.amount} <span style="color:var(--danger);cursor:pointer;margin-left:8px" onclick="delExtraFromDetail('${ex.id}','${wid}','${extraName}')">✕</span></span></div>`;
+    });
+    openModal('modalExtraDetail');
 }
-function closeModal(id) {
-    if(!id) document.querySelectorAll('.overlay').forEach(o => { o.style.opacity=0; setTimeout(()=>o.style.display='none',200); });
-    else { const m = document.getElementById(id); m.style.opacity=0; setTimeout(()=>m.style.display='none',200); }
-}
-function switchPage(pid) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-'+pid).classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('nav-'+pid).classList.add('active');
-    
-    if(pid === 'cal') {
-        const t = THEMES[db.settings.theme];
-        const themeRgba = `rgba(${t.r},${t.g},${t.b},0.4)`;
-        const baseColor = db.settings.darkMode ? '#000000' : '#FFFFFF';
-        document.body.style.background = `linear-gradient(${themeRgba}, ${themeRgba}), ${baseColor}`;
-        
-        renderCalendar();
-    } else {
-        document.body.style.background = 'var(--bg-std)';
-        if(pid === 'work') renderWorkerList();
-        if(pid === 'set') renderThemeGrid();
+function delExtraFromDetail(eid, wid, extraName) {
+    if(confirm('刪除？')) { 
+        db.extras = db.extras.filter(e => e.id !== eid); saveDB();
+        const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
+        const remaining = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym) && e.name === extraName);
+        if(remaining.length === 0) { closeModal('modalExtraDetail'); openWorkerModal(wid); } else { openExtraDetail(wid, extraName); }
     }
 }
 </script>
