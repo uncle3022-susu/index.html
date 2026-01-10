@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>工程帳本 Ultimate Final v7.6</title>
+    <title>工程帳本 Ultimate Final v7.7</title>
     <style>
         /* --- 1. 核心變數 --- */
         :root {
@@ -239,6 +239,7 @@
             flex: 1;
         }
         
+        /* 案場篩選 Sticky Footer */
         .modal-footer-sticky {
             padding: 15px 24px;
             background: var(--bg-card);
@@ -310,12 +311,14 @@
             display: flex; align-items: center; justify-content: center; z-index: 90;
         }
         
+        /* 個人日曆樣式 */
         .p-cal-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
         .p-cal-date { width: 50px; font-weight: bold; text-align: center; display: flex; flex-direction: column; align-items: center; }
         .p-cal-content { flex: 1; font-size: 0.9rem; }
         .p-cal-site { margin-bottom: 4px; }
         .p-cal-extra { color: var(--text-sub); font-size: 0.85rem; margin-top: 2px; }
 
+        /* 統計圖表樣式 */
         .chart-container { position: relative; width: 180px; height: 180px; margin: 0 auto 20px auto; }
         .chart-center-text { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
@@ -377,12 +380,15 @@
                 
                 <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
                     <div style="display:flex; align-items:center; height:50px;">
+                        
                         <label for="wDateFilter" style="display:flex; align-items:center; gap:10px; flex:1; height:100%; cursor:pointer;">
                             <svg class="icon-svg" style="color:var(--text-sub)" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             <input type="date" id="wDateFilter" 
-                                   style="border:none; background:transparent; padding:0; flex:1; font-size:16px; height:100%; text-align:left; color:var(--text-main); font-family:inherit;" 
+                                   style="border:none; background:transparent; padding:0; flex:1; font-size:16px; height:100%; 
+                                          text-align:left; color:var(--text-main); font-family:inherit;" 
                                    onchange="renderWorkerList()">
                         </label>
+                
                         <div id="btnDateReset" onclick="resetDateFilter()" style="display:none; padding:5px; cursor:pointer; color:var(--text-sub); margin-left:5px;">
                             <svg class="icon-svg-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </div>
@@ -926,34 +932,26 @@ function renderWorkerList() {
     const hasDateFilter = !!dFilter;
     const hasSiteFilter = siteNames.length > 0;
 
-    // 1. 計算每位師傅的「顯示金額」 (根據篩選條件)
+    // 1. 計算顯示金額
     const workersWithDisplayData = db.workers.map(w => {
-        // A. 篩選相關案場
+        // A. 篩選案場工資
         let relevantSites = db.sites.filter(s => s.workers.some(sw => sw.id === w.id));
         
-        if (hasDateFilter) {
-            relevantSites = relevantSites.filter(s => s.date === dFilter);
-        } else {
-            relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
-        }
+        if (hasDateFilter) relevantSites = relevantSites.filter(s => s.date === dFilter);
+        else relevantSites = relevantSites.filter(s => s.date.startsWith(ym));
         
-        if (hasSiteFilter) {
-            relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
-        }
+        if (hasSiteFilter) relevantSites = relevantSites.filter(s => siteNames.includes(s.name));
 
         const displaySalary = relevantSites.reduce((acc, s) => {
             const sw = s.workers.find(x => x.id === w.id);
             return acc + (sw ? Number(sw.snapshotRate) : 0);
         }, 0);
 
-        // B. 篩選相關雜費
+        // B. 篩選雜費
         let relevantExtras = db.extras.filter(e => e.wid === w.id);
         
-        if (hasDateFilter) {
-            relevantExtras = relevantExtras.filter(e => e.date === dFilter);
-        } else {
-            relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
-        }
+        if (hasDateFilter) relevantExtras = relevantExtras.filter(e => e.date === dFilter);
+        else relevantExtras = relevantExtras.filter(e => e.date.startsWith(ym));
 
         if (hasSiteFilter) {
             relevantExtras = relevantExtras.filter(e => {
@@ -971,19 +969,17 @@ function renderWorkerList() {
             ...w,
             displayPay: totalDisplayPay, 
             displayDays: workDays,
-            rawSalary: displaySalary, // For Chart
-            rawExtras: relevantExtras // For Chart
+            rawSalary: displaySalary,    
+            rawExtras: relevantExtras    
         };
     });
 
-    // 2. 決定顯示哪些師傅
+    // 2. 顯示邏輯
     currentFilteredWorkerIds = [];
 
     const finalDisplayList = workersWithDisplayData.filter(w => {
-        // 搜尋過濾
         if (wSearch && !w.name.toLowerCase().includes(wSearch)) return false;
         
-        // 篩選模式：只顯示有錢或有工的人
         if (hasDateFilter || hasSiteFilter) {
             if (w.displayPay > 0 || w.displayDays > 0) {
                 currentFilteredWorkerIds.push(w.id);
@@ -992,20 +988,16 @@ function renderWorkerList() {
             return false;
         }
 
-        // 一般模式 (本月視圖)：隱藏的人不顯示 (除非被搜尋搜出來，但這裡我們先遵循隱藏設定)
-        // [Fix] 恢復原有的隱藏邏輯：若被隱藏則不顯示在列表，除非進入案場選單且已選
-        // 修正：這裡我們只負責列表顯示。
-        // 但為了能在列表看到隱藏的師傅並取消隱藏，我們通常顯示出來並標示 (隱藏)
-        // 使用者提到 "隱藏功能會保留在師傅名單裡，名稱後(隱藏)，灰字"
-        // 所以這裡即使 isDisabled 為 true 也要 return true (除非搜尋不匹配)
-        
+        // 一般模式：隱藏者也顯示，但標記為隱藏
         currentFilteredWorkerIds.push(w.id);
         return true; 
     });
 
     // 排序
     finalDisplayList.sort((a,b) => {
+        // 置頂優先
         if (a.isTop !== b.isTop) return (b.isTop?1:0) - (a.isTop?1:0);
+        // 隱藏的沈底
         if (a.isDisabled !== b.isDisabled) return (a.isDisabled?1:0) - (b.isDisabled?1:0);
         return b.displayDays - a.displayDays;
     });
@@ -1014,17 +1006,18 @@ function renderWorkerList() {
     const grandTotal = finalDisplayList.reduce((sum, w) => sum + w.displayPay, 0);
     document.getElementById('totalExp').innerText = `$${grandTotal.toLocaleString()}`;
     
-    // 更新 Cache 供圖表使用
     filteredWorkersCache = finalDisplayList; 
 
-    // 3. 渲染卡片
+    // 3. 渲染
     finalDisplayList.forEach(w => {
         const card = document.createElement('div');
         card.className = 'worker-card card';
+        // [Fix] 隱藏狀態樣式
         if(w.isDisabled) card.classList.add('disabled');
         card.style.padding = '15px';
         
         const star = w.isTop ? '<svg class="icon-svg-sm" viewBox="0 0 24 24" style="fill:gold;color:gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ' : '';
+        // [Fix] 隱藏文字
         const nameText = w.isDisabled ? `${w.name} (隱藏)` : w.name;
         
         let tagHtml = '';
@@ -1052,7 +1045,7 @@ function renderWorkerList() {
     });
 }
 
-/* --- 統計圖表 (使用篩選後的 Cache) --- */
+/* --- 統計圖表 --- */
 function openStatsModal() {
     if(filteredWorkersCache.length === 0) return alert("目前無資料");
     
@@ -1199,7 +1192,7 @@ function openWorkerModal(id) {
         });
         
         const btnHide = btnsDiv.children[0];
-        // [Fix] 恢復隱藏/取消隱藏邏輯
+        // [Fix] 恢復隱藏/取消隱藏按鈕文字
         if (w.isDisabled) {
             btnHide.innerText = "取消隱藏";
             btnHide.className = "btn btn-unhide";
@@ -1353,7 +1346,7 @@ function saveMultiExtra() {
     saveDB(); closeModal('modalMultiExtra'); renderWorkerList();
 }
 
-/* --- 案場請款 (還原回 code7.2 html.txt) --- */
+/* --- 案場請款 (還原回 code7.2) --- */
 function openPaymentModal() {
     const list = document.getElementById('payList');
     list.innerHTML = "";
@@ -1497,16 +1490,21 @@ function toggleGasLock() {
     db.settings.gasLock = isLocked; db.settings.gasUrl = inp.value; saveDB();
 }
 function masterReset() { if(confirm('警告：清除所有資料？')) { localStorage.removeItem('ENG_LEDGER_FINAL_V7'); location.reload(); } }
+// [Fix] 修復查看日曆失效問題：確保函式存在
 function openPersonalCalendar(wid) {
     if(!wid) return;
     const w = db.workers.find(x => x.id === wid);
+    if(!w) return; // 防呆
+    
     document.getElementById('pcTitle').innerText = `${curDate.getFullYear()}年${curDate.getMonth()+1}月 - ${w.name}`;
     const list = document.getElementById('pcList');
     list.innerHTML = "";
+    
     const ym = `${curDate.getFullYear()}-${String(curDate.getMonth()+1).padStart(2,'0')}`;
     const daysInM = new Date(curDate.getFullYear(), curDate.getMonth()+1, 0).getDate();
     const monthSites = db.sites.filter(s => s.date.startsWith(ym) && s.workers.some(sw => sw.id === wid));
     const monthExtras = db.extras.filter(e => e.wid === wid && e.date.startsWith(ym));
+    
     let hasData = false;
     for(let d=1; d<=daysInM; d++) {
         const dateStr = `${ym}-${String(d).padStart(2,'0')}`;
@@ -1514,6 +1512,7 @@ function openPersonalCalendar(wid) {
         const dayExtras = monthExtras.filter(e => e.date === dateStr);
         if(daySites.length === 0 && dayExtras.length === 0) continue;
         hasData = true;
+        
         let contentHtml = "";
         daySites.forEach(s => { const sw = s.workers.find(x => x.id === wid); contentHtml += `<div class="p-cal-site"><b>${s.name}</b> <span style="color:var(--text-sub)">($${sw.snapshotRate})</span></div>`; });
         dayExtras.forEach(e => { contentHtml += `<div class="p-cal-extra">${e.name} $${e.amount}</div>`; });
@@ -1522,7 +1521,9 @@ function openPersonalCalendar(wid) {
         row.innerHTML = `<div class="p-cal-date">${d}<span style="font-size:0.7em;font-weight:normal">日</span></div><div class="p-cal-content">${contentHtml}</div>`;
         list.appendChild(row);
     }
+    
     if(!hasData) list.innerHTML = "<div style='text-align:center;padding:20px;color:var(--text-sub)'>本月無上工記錄</div>";
+    
     openModal('modalPersonalCal');
 }
 </script>
